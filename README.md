@@ -12,3 +12,11 @@ Under development. This repository holds a module for integrating the rigid helm
 * Videos from [NatMEG on-scalp MEG symposium 2022](https://natmeg.se/activities/on-scalp-meg-symposium-2022.html)
 * [On-scalp MEG sensor localization using magnetic dipole-like coils: A method
 for highly accurate co-registration](https://www.sciencedirect.com/science/article/pii/S1053811920301737)
+
+
+## Notes
+
+**Reference layout** 
+* Each of the sensors location relative to each other
+* Can improve localisation over solving the equation for each sensor individually
+* Should be able to get from helmet documentation. 
