@@ -1,2 +1,2 @@
 from .sensor_locations import update_sensor_locations, plot_sensor_locations
-from .dev_head_t import make_transformation
+from .digitising import mark_sensors

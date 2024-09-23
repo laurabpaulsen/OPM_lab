@@ -1,0 +1,1 @@
+This template for the FieldLine Alpha 1 helmet is modified from the matlab template from [FieldTrip](https://github.com/fieldtrip/fieldtrip/blob/master/template/gradiometer/fieldlinealpha1.mat)

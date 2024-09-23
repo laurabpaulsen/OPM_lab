@@ -86,22 +86,7 @@ def output_cm(serialobj):
     time.sleep(0.1)  # Pause for 100 ms
 
 
-def get_n_recievers(serialobj):
-    serialobj.write(b'P')  # Send 'P' command to request number of probes
-    time.sleep(0.1) 
-
-    # Initialize the number of receivers
-    n_recievers = 0
-
-    # Check for available bytes in the serial buffer
-    while serialobj.in_waiting > 0:
-        n_recievers += 1  # Increment receiver count
-        serialobj.read(serialobj.in_waiting)  # Read and discard available data
-
-    return n_recievers
-
-
-def get_n_recievers(serialobj):
+def get_n_receivers(serialobj):
     serialobj.write(b'P')  # Send 'P' command to request number of probes
     time.sleep(0.1) 
 
