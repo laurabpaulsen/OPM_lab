@@ -108,13 +108,13 @@ def idx_of_next_point(distance, idx, limit = 30):
     # if stylus was clicked more than limit away from the head reference, the last point is undone
     if distance > limit:
         # Play a beep sound to indicate that data is ready
-        os.system("afplay " + 'wrongbeep.wav')
+        os.system("afplay " + 'soundfiles/wrongbeep.wav')
         if idx == 0:
             return 0
         else:
             return idx - 1
     else: # moving on to the next
-        os.system("afplay " + 'beep.wav')
+        os.system("afplay " + 'soundfiles/beep.wav')
         return idx + 1
 
 
