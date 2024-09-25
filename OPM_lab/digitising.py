@@ -3,7 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 import math
+from pathlib import Path
 
+BASE_DIR = Path(__file__).resolve().parent
+SOUND_DIR = BASE_DIR / 'soundfiles'
 
 def rotate_and_translate(xref, yref, zref, azi, ele, rol, xraw, yraw, zraw):
     # Convert angles to radians
@@ -105,17 +108,20 @@ def get_n_receivers(serialobj):
 
 
 def idx_of_next_point(distance, idx, limit = 30):
+    wrong_beep_path = SOUND_DIR / 'wrongbeep.wav'
+    beep_path = SOUND_DIR / 'beep.wav'
+
     # if stylus was clicked more than limit away from the head reference, the last point is undone
     if distance > limit:
         # Play a beep sound to indicate that data is ready
-        os.system("afplay " + 'soundfiles/wrongbeep.wav')
+        os.system(f'afplay "{str(wrong_beep_path)}"')
         if idx == 0:
-            return 0
+            return 0, False
         else:
-            return idx - 1
+            return idx - 1, False
     else: # moving on to the next
-        os.system("afplay " + 'soundfiles/beep.wav')
-        return idx + 1
+        os.system(f'afplay "{str(beep_path)}"')
+        return idx + 1, True
 
 
 def calculate_distance(point1, point2):
@@ -133,20 +139,55 @@ def update_message_box(ax, sensor_type, sensor_name, message):
 
 def add_point_3d(x, y, z, sensor_type, ax):
     """Add a point to the 3D plot."""
+    alpha = 1
+    size = 6
     if sensor_type == "OPM":
         color = "blue"
     elif sensor_type == "EEG":
         color = "orange"
     elif sensor_type == "fiducials":
         color = "green"
+    else:
+        color = "k"
+        alpha = 0.2
+        size = 3
 
-    ax.scatter(x, y, z, c=color, label=sensor_type)
+    ax.scatter(x, y, z, c=color, label=sensor_type, alpha = alpha, s = size)
 
-def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datalength=47, stylus=0, head_ref=1, prev_digitised=None):
-    print('Pressing the stylus button more than 30 cm from the head reference will undo the point')
 
-    sensor_position = np.zeros((len(sensor_names), 3))
+def get_position_relative_to_head_receiver(serialobj, n_receivers, stylus, head_ref):
+    # Convert ASCII data into numbers and store in sensor_data array
+    sensor_data = np.zeros((7, n_receivers))
+        
+    for j in range(n_receivers):
+        ftstring = serialobj.readline().decode().strip()
+        header, x, y, z, azimuth, elevation, roll = ftformat(ftstring)
 
+        sensor_data[0, j] = header
+        sensor_data[1, j] = x
+        sensor_data[2, j] = y
+        sensor_data[3, j] = z
+        sensor_data[4, j] = azimuth
+        sensor_data[5, j] = elevation            
+        sensor_data[6, j] = roll
+
+    # Get sensor position relative to head reference
+    sensor_position = rotate_and_translate(
+        sensor_data[1, head_ref],
+        sensor_data[2, head_ref],
+        sensor_data[3, head_ref],
+        sensor_data[4, head_ref],
+        sensor_data[5, head_ref],
+        sensor_data[6, head_ref],
+        sensor_data[1, stylus],
+        sensor_data[2, stylus],
+        sensor_data[3, stylus]
+        )
+
+    return sensor_data, sensor_position[:3]
+
+
+def setup_digitisation_figure(prev_digitised):
     # set up the figure with two subplots: one for 3D plot, one for messages
     fig = plt.figure(figsize=(10, 6))
     
@@ -155,7 +196,7 @@ def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datale
     ax_3d.set_xlabel('X')
     ax_3d.set_ylabel('Y')
     ax_3d.set_zlabel('Z')
-    ax_3d.set_title(f'{sensor_type} Sensor Digitization')
+    ax_3d.set_title(f'Points digitised')
     ax_3d.set_xlim([-30, 30])
     ax_3d.set_ylim([-30, 30])
     ax_3d.set_zlim([-30, 30])
@@ -167,59 +208,107 @@ def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datale
 
     # textbox subplot
     ax_text = fig.add_subplot(122)
-    ax_text.axis('off')  # No axis for the text box
+    ax_text.axis('off')
 
+    return fig, ax_3d, ax_text
+
+
+
+
+def mark_headshape(serialobj, n_receivers, datalength=47, stylus=0, head_ref=1, prev_digitised=None, scalp_surface_size=200):
+    scalp_surface = np.zeros((scalp_surface_size, 3))  # Stores the scalp points
+    fig, ax_3d, ax_text = setup_digitisation_figure(prev_digitised)
+
+    # Set up the figure for real-time updating
+    update_message_box(ax_text, sensor_name="head shape", sensor_type="head",
+                       message="Ready for digitization... Press the stylus button to record points. Press 'x' to stop.") 
+    plt.draw()  # Ensures the initial plot is drawn
+    plt.show(block=False)  # Show the plot without blocking the rest of the code
 
     idx = 0
-    while idx < len(sensor_names):   
-        update_message_box(ax_text, sensor_name=sensor_names[idx], sensor_type=sensor_type, message="Ready for digitization...") 
-        plt.draw()
-        
+    print("Press the stylus button to start scanning")
+
+    scalp_surface = np.zeros((scalp_surface_size, 3))  # Stores the scalp points
+    fig, ax_3d, ax_text = setup_digitisation_figure(prev_digitised)
+
+    # Set up the figure for real-time updating
+    update_message_box(ax_text, sensor_name="head shape", sensor_type="head",
+                       message="Ready for digitization... Press the stylus button to record points. Press 'x' to stop.") 
+    plt.draw()  # Ensures the initial plot is drawn
+    plt.show(block=False)  # Show the plot without blocking the rest of the code
+
+    idx = 0
+    print("Press the stylus button to start scanning")
+
+    try:
+        # Run until we have captured enough points or user stops scanning
+        while idx < scalp_surface_size:
+            # Wait for data indicating button press
+            while serialobj.in_waiting < datalength:
+                pass  # Wait for data
+
+            # Read and process the incoming data from the receivers
+            data, position = get_position_relative_to_head_receiver(serialobj, n_receivers, stylus=stylus, head_ref=head_ref)
+
+            # Check if the stylus button is pressed (assuming the header has the button press info)
+            
+            scalp_surface[idx, :] = position  # Store the position when button is pressed
+            print(f"Point {idx + 1}/{scalp_surface_size} digitized at {position}")
+            idx += 1  # Move to the next point
+                
+            # Update the 3D plot with the newly captured point
+            add_point_3d(position[0], position[1], position[2], ax=ax_3d, sensor_type="head")
+            plt.draw()  # Refresh the plot
+
+            # Check if the user presses a key (e.g., 'x') to stop scanning early
+            if plt.waitforbuttonpress(timeout=0.1) and plt.get_current_fig_manager().canvas.key_press_handler_id == 'x':
+                print("Stopping digitization early.")
+                break
+
+    except KeyboardInterrupt:
+        print("Digitization interrupted by user.")
+    
+    os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
+
+    return scalp_surface
+
+def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datalength=47, stylus=0, head_ref=1, prev_digitised=None):
+    print('Pressing the stylus button more than 30 cm from the head reference will undo the point')
+
+    sensor_positions = np.zeros((len(sensor_names), 3))
+
+    fig, ax_3d, ax_text = setup_digitisation_figure(prev_digitised)
+   
+    idx = 0
+    
+    update_message_box(ax_text, sensor_name=sensor_names[idx], sensor_type=sensor_type, message="Ready for digitization...") 
+    plt.draw()  # Ensures the initial plot is drawn
+    plt.show(block=False)  # Show the plot without blocking the rest of the code
+
+
+    while idx < len(sensor_names):
         # Wait for all data from the receivers to arrive in the buffer
         while serialobj.in_waiting < n_receivers * datalength:
             pass  
         
-        # Convert ASCII data into numbers and store in sensor_data array
-        sensor_data = np.zeros((7, n_receivers))
+        sensor_data, sensor_positions[idx] = get_position_relative_to_head_receiver(serialobj, n_receivers, stylus, head_ref)
         
-        for j in range(n_receivers):
-            ftstring = serialobj.readline().decode().strip()
-            header, x, y, z, azimuth, elevation, roll = ftformat(ftstring)
-
-            sensor_data[0, j] = header
-            sensor_data[1, j] = x
-            sensor_data[2, j] = y
-            sensor_data[3, j] = z
-            sensor_data[4, j] = azimuth
-            sensor_data[5, j] = elevation
-            sensor_data[6, j] = roll
-
-        # Get sensor position relative to head reference
-        vector = rotate_and_translate(
-            sensor_data[1, head_ref],
-            sensor_data[2, head_ref],
-            sensor_data[3, head_ref],
-            sensor_data[4, head_ref],
-            sensor_data[5, head_ref],
-            sensor_data[6, head_ref],
-            sensor_data[1, stylus],
-            sensor_data[2, stylus],
-            sensor_data[3, stylus]
-        )
-        
-        sensor_position[idx] = vector[:3]  
-        
-        # Add the current point to the 3D plot
-        add_point_3d(sensor_position[idx, 0], sensor_position[idx, 1], sensor_position[idx, 2], ax=ax_3d, sensor_type=sensor_type)
-
-        # Checking if the click was more than 30 cm from the head reference
+        # checking if the click was more than 30 cm from the head reference
         point1 = (sensor_data[1, 0], sensor_data[2, 0], sensor_data[3, 0])
         point2 = (sensor_data[1, 1], sensor_data[2, 1], sensor_data[3, 1])
 
-        idx = idx_of_next_point(calculate_distance(point1, point2), idx, limit=30)
+        # adjust the index based on whether the point is valid or needs to be undone (i.e. more than 30 cm away from head receiver)
+        idx, cont = idx_of_next_point(calculate_distance(point1, point2), idx, limit=30)
+        
+        if idx <= len(sensor_names)-1:
+            update_message_box(ax_text, sensor_name=sensor_names[idx], sensor_type=sensor_type, message="Now digitising:") 
+        if cont:
+            # Add the current point to the 3D plot
+            add_point_3d(sensor_positions[idx-1, 0], sensor_positions[idx-1, 1], sensor_positions[idx-1, 2], ax=ax_3d, sensor_type=sensor_type)
 
-        plt.pause(0.1)  # Pause briefly to update the plot
-    
+        plt.draw()  # Update the plot to reflect the new message
+        #plt.pause(0.1)
+
     plt.close()
     
-    return sensor_position
+    return sensor_positions
