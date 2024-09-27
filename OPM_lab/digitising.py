@@ -187,7 +187,7 @@ def get_position_relative_to_head_receiver(serialobj, n_receivers, stylus, head_
     return sensor_data, sensor_position[:3]
 
 
-def setup_digitisation_figure(prev_digitised):
+def setup_digitisation_figure(prev_digitised = None, set_axes_limits = True):
     # set up the figure with two subplots: one for 3D plot, one for messages
     fig = plt.figure(figsize=(10, 6))
     
@@ -197,9 +197,10 @@ def setup_digitisation_figure(prev_digitised):
     ax_3d.set_ylabel('Y')
     ax_3d.set_zlabel('Z')
     ax_3d.set_title(f'Points digitised')
-    ax_3d.set_xlim([-30, 30])
-    ax_3d.set_ylim([-30, 30])
-    ax_3d.set_zlim([-30, 30])
+    if set_axes_limits:
+        ax_3d.set_xlim([-30, 30])
+        ax_3d.set_ylim([-30, 30])
+        ax_3d.set_zlim([-30, 30])
 
     if prev_digitised:
         for sensor_type_tmp, points in prev_digitised.items():
@@ -272,7 +273,7 @@ def mark_headshape(serialobj, n_receivers, datalength=47, stylus=0, head_ref=1, 
 
     return scalp_surface
 
-def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datalength=47, stylus=0, head_ref=1, prev_digitised=None):
+def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datalength=47, stylus=0, head_ref=1, prev_digitised=None, limit = 30):
     print('Pressing the stylus button more than 30 cm from the head reference will undo the point')
 
     sensor_positions = np.zeros((len(sensor_names), 3))
@@ -298,7 +299,7 @@ def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datale
         point2 = (sensor_data[1, 1], sensor_data[2, 1], sensor_data[3, 1])
 
         # adjust the index based on whether the point is valid or needs to be undone (i.e. more than 30 cm away from head receiver)
-        idx, cont = idx_of_next_point(calculate_distance(point1, point2), idx, limit=30)
+        idx, cont = idx_of_next_point(calculate_distance(point1, point2), idx, limit=limit)
         
         if idx <= len(sensor_names)-1:
             update_message_box(ax_text, sensor_name=sensor_names[idx], sensor_type=sensor_type, message="Now digitising:") 
@@ -307,7 +308,7 @@ def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datale
             add_point_3d(sensor_positions[idx-1, 0], sensor_positions[idx-1, 1], sensor_positions[idx-1, 2], ax=ax_3d, sensor_type=sensor_type)
 
         plt.draw()  # Update the plot to reflect the new message
-        #plt.pause(0.1)
+        plt.pause(0.1)
 
     plt.close()
     
