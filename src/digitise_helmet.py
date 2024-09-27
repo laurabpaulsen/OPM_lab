@@ -9,29 +9,6 @@ parent_directory = current_file.parent.parent
 sys.path.append(str(parent_directory)) 
 from OPM_lab.digitising import *
 
-"""
-key: fid, value: 
- {'label': [['A1'], ['A2'], ['A3'], ['A4'], ['A5'], ['A6'], ['A7'], ['A8'], ['B1'], ['B2'], ['B3'], ['B4'], ['B5'], ['B6'], ['B7'], ['B8'], ['B9']], 'pos': array([[ 0.08923,  0.06384, -0.034  ],
-       [ 0.07301,  0.09659, -0.018  ],
-       [ 0.04718,  0.12448, -0.009  ],
-       [ 0.02051,  0.13806, -0.008  ],
-       [-0.02051,  0.13806, -0.008  ],
-       [-0.04718,  0.12448, -0.009  ],
-       [-0.07301,  0.09659, -0.018  ],
-       [-0.08923,  0.06384, -0.034  ],
-       [ 0.09968, -0.01251, -0.05268],
-       [ 0.09881,  0.0258 , -0.0139 ],
-       [ 0.08515,  0.07538, -0.03885],
-       [ 0.04198,  0.12871, -0.01391],
-       [ 0.     ,  0.14151, -0.01391],
-       [-0.04198,  0.12871, -0.01391],
-       [-0.08515,  0.07538, -0.03885],
-       [-0.09881,  0.0258 , -0.0139 ],
-       [-0.09968, -0.01251, -0.05268]])}
-
-
-"""
-
 if __name__ == "__main__":
     output_path = Path(__file__).parents[1] / "output"
 
@@ -39,7 +16,7 @@ if __name__ == "__main__":
         output_path.mkdir(parents=True)
 
     fiducials = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']
-    scalp_surface_size = 1000
+    scalp_surface_size = 200
 
     # receiver configuration
     stylus_receiver = 0
@@ -68,23 +45,21 @@ if __name__ == "__main__":
 
     already_digitised = {}
 
-    for sensor_labels, sensor_type in zip([["helmet"]*scalp_surface_size, fiducials], ["helmet", "fiducials"]):
+    for sensor_labels, sensor_type in zip([ ["helmet"]*scalp_surface_size, fiducials], ["helmet", "fiducials"]):
         clear_old_data(serialobj) # to make sure any "residue" button presses from previously does not interfere
 
         if sensor_type == "helmet":
             coordinates = mark_headshape(serialobj, n_receivers, scalp_surface_size=scalp_surface_size)
         
         else:
-            coordinates = mark_sensors(serialobj, n_receivers, sensor_labels, sensor_type=sensor_type, prev_digitised=already_digitised)
+            coordinates = mark_sensors(serialobj, n_receivers, sensor_labels, sensor_type=sensor_type, prev_digitised=already_digitised, limit = 50)
         
         already_digitised[sensor_type] = coordinates
         
         # save coordinates to CSV file (append mode 'a')
-        with open(output_path / f'helmet_digitisation.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            
+        with open(output_path / f'helmet_digitisation.csv', 'a', newline='') as csvfile:        
             file_exists = (output_path / 'helmet_digitisation.csv').exists()
-
+            writer = csv.writer(csvfile)
             # only write the header if the file doesn't already exist
             if not file_exists:
                 writer.writerow(['sensor_type', 'label', 'x', 'y', 'z'])
