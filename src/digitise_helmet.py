@@ -45,7 +45,7 @@ if __name__ == "__main__":
 
     already_digitised = {}
 
-    for sensor_labels, sensor_type in zip([ ["helmet"]*scalp_surface_size, fiducials], ["helmet", "fiducials"]):
+    for sensor_labels, sensor_type in zip([fiducials, ["helmet"]*scalp_surface_size,], ["fiducials", "helmet"]):
         clear_old_data(serialobj) # to make sure any "residue" button presses from previously does not interfere
 
         if sensor_type == "helmet":
