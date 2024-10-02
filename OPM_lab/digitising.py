@@ -284,7 +284,7 @@ def mark_sensors(serialobj, n_receivers, sensor_names, sensor_type="OPM", datale
     
     update_message_box(ax_text, sensor_name=sensor_names[idx], sensor_type=sensor_type, message="Ready for digitization...") 
     plt.draw()  # Ensures the initial plot is drawn
-    plt.show(block=False)  # Show the plot without blocking the rest of the code
+    plt.pause(0.1)
 
 
     while idx < len(sensor_names):

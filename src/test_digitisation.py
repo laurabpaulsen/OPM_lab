@@ -21,16 +21,6 @@ def get_participant_information():
 
     return participant_info
 
-
-def input_depth_measurement(OPMs):
-    print("Please enter depth measurements of OPMs using caliper in milimeters")
-    
-    depth_measurements = {}
-    for OPM in OPMs:
-        depth_measurements['OPM'] = input(f"Caliper measurement for {OPM}: ")
-
-    return depth_measurements
-
 if __name__ == "__main__":
     # Get participant information
     participant_info = get_participant_information()
@@ -43,8 +33,10 @@ if __name__ == "__main__":
     fiducials = ["LA", "RA", "NASION"]
     OPM_sensors = ["FL52", "FL61", "FL92", "FL99"]
     EEG_sensors = ["fake", "fake"]
+    helmet_fiducials = ['A1', 'A2', 'A3', 'A4', 'A5', 'A6', 'A7', 'A8', 'B1', 'B2', 'B3', 'B4', 'B5', 'B6', 'B7', 'B8', 'B9']
 
-    scalp_surface_size = 60
+
+    scalp_surface_size = 40
 
     # Receiver configuration
     stylus_receiver = 0
@@ -75,7 +67,7 @@ if __name__ == "__main__":
 
     already_digitised = {}
 
-    for sensor_labels, sensor_type in zip([["head"]*scalp_surface_size, fiducials, OPM_sensors, EEG_sensors], ["head_shape", "fiducials", "OPM", "EEG"]):
+    for sensor_labels, sensor_type in zip([["head"]*scalp_surface_size, fiducials, OPM_sensors, EEG_sensors, helmet_fiducials], ["head_shape", "fiducials", "OPM", "EEG", "helmet_fiducials"]):
         clear_old_data(serialobj) # to make sure any "residue" button presses from previously does not interfere
 
         if sensor_type == "head_shape":
@@ -100,16 +92,4 @@ if __name__ == "__main__":
             for idx, label in enumerate(sensor_labels):
                 writer.writerow([sensor_type, label, coordinates[idx, 0], coordinates[idx, 1], coordinates[idx, 2]])
 
-
-    # get depth measurements for OPM 
-    # NOTE: NOT TESTED YET
-    depth_measurements = input_depth_measurement()
-    with open(output_path / f'{participant_info["participant_id"]}_depthmeas.csv', 'a', newline='') as csvfile:
-        writer = csv.writer(csvfile)
-            
-        writer.writerow(['sensor_type', 'label', 'depth'])
-            
-        # Write sensor data to the file
-        for sens, depth in depth_measurements.items():
-            writer.writerow(["OPM", sens, depth])
     
