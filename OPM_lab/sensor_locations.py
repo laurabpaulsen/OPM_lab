@@ -106,34 +106,6 @@ def plot_sensor_locations(info):
 
     plt.show() 
 
-def update_sensor_loc(old_loc):
-    print("Not updating sensor location at the moment. Remember to CHANGE THIS FUNCTION")
-    return old_loc
-
-def update_sensor_locations(info):
-
-    old_loc = []
-    new_loc = [] # for plottting
-
-    for i, ch in enumerate(info["chs"]):
-        tmp_loc = ch["loc"][:3]  # extract x, y, z
-        old_loc.append(tmp_loc)       
-
-        # change sensor positions
-        tmp_new_loc = update_sensor_loc(tmp_loc)
-        new_loc.apped(tmp_loc)
-        
-        info['chs'][i]['loc'][:3] = tmp_new_loc
-        # change sensor orientations
-        #rot_coils = np.array([location[3:6], location[6:9], location[9:12]]) # orientation
-        #rot_coils = rot_coils @ R.T
-        
-        #location[3:12] = rot_coils.flatten() # check if this is correct
-
-    new_loc = np.array(new_loc)
-
-    return info
-
 
 class HelmetTemplate:
     def __init__(
@@ -143,14 +115,57 @@ class HelmetTemplate:
             label,
             fid_pos,
             fid_label,
-            #unit
+            unit
             ):
+        
         self.chan_ori = chan_ori
         self.chan_pos = chan_pos
         self.fid_pos = fid_pos
         self.fid_label = fid_label
         self.label = label
-        #self.unit = unit
+        self.unit = unit
+
+    def get_chs_pos(self, labels):
+        """
+        Retrieve the positions of the channels specified by the input labels.
+
+        Parameters:
+            labels (list): A list of channel labels to retrieve positions for.
+
+        Returns:
+            list: A list of positions for the specified channels.
+        """
+        positions = []
+            
+        for label in labels:
+            if label in self.label:
+                index = self.label.index(label)
+                positions.append(self.chan_pos[index])
+            else:
+                print(f"Label '{label}' not found in the helmet template.")
+
+        return positions
+    
+    def get_chs_ori(self, labels):
+        """
+        Retrieve the positions of the channels specified by the input labels.
+
+        Parameters:
+            labels (list): A list of channel labels to retrieve positions for.
+
+        Returns:
+            list: A list of orientations for the specified channels.
+        """
+        orientations = []
+            
+        for label in labels:
+            if label in self.label:
+                index = self.label.index(label)
+                orientations.append(self.chan_ori[index])
+            else:
+                print(f"Label '{label}' not found in the helmet template.")
+
+        return orientations
 
 
 class OPMSensorLayout:
@@ -160,8 +175,7 @@ class OPMSensorLayout:
         self.label = label
 
 
-
-# Custom unpickler to ensure the correct class is found
+# custom unpickler to ensure the correct class is found
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
         if name == 'HelmetTemplate':
@@ -177,3 +191,6 @@ template_path = module_dir / 'template' / 'FL_alpha1_helmet.pkl'
 # Open the file and load the pickle object using the custom unpickler
 with template_path.open('rb') as file:
     FL_alpha1_helmet = CustomUnpickler(file).load()
+
+
+
