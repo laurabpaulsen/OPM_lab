@@ -21,20 +21,16 @@ TBD
 ## 🥼 In the lab
 1. Metal strip participant
 2. Put on EEG cap
-3. Go to the MSR and place them in the helmet
-4. Put in dummy sensors
-5. Mark OPMs with felt pen
-6. Mark on MEG chair level
-7. Mark on face and helmet to ensure ability to return to same position
-8. Remove participant from MSR
-9. Digitise (fiducials, OPM-felt pen markers, EEG electrodes, facial features for co-registration with MR)
-10. Gel electrodes
-11. Check impedances
-12. Return to MSR
-13. Align chair level and face marks 
-14. Put on chin strap
-15. Measure Z depth of sensors -> may be useful as a sanity check but not needed in the current pipeline
-
+3. Gel electrodes
+4. Check impedances
+5. Go to the MSR and place them in the helmet
+6. Put in dummy sensors
+7. Put on chin strap
+8. Mark OPMs with felt pen
+9. Measure Z depth of sensors -> may be useful as a sanity check but not needed in the current pipeline
+10. Run experiment
+11. Remove participant from MSR
+12. Digitise (fiducials, OPM-felt pen markers, EEG electrodes, facial features for co-registration with MR)
 
 
 
