@@ -44,6 +44,8 @@ Note on dig_type argument in the Digtiser.add() function:
 The digitisation will be shown using matplotlib - however sometimes the plot takes a bit to update, and the plot does not show until the first point is made
 
 
+Note: during digitisation some sounds are played to provide feedback. However this functionally currently only works on mac
+
 ## Co-registration
 TBD
 
