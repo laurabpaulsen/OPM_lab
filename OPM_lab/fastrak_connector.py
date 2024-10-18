@@ -7,13 +7,21 @@ import numpy as np
 class FastrakConnector:
     def __init__(self, usb_port:str, stylus_receiver = 0, head_reference = 1, data_length = 47):
         """
+        A class to interface with the Polhemus FASTRAK system.
+        
         Args:
-            usb_port (str): the usb port the Polhemus FASTRAK is connected to
-            stylus receiver (int): number of the receiver port stylus is connected to
-            head_reference (int): number of the receiver port head reference is connected to
-            data_length (int): 
-            
+            usb_port (str): The USB port to which the Polhemus FASTRAK is connected.
+            stylus_receiver (int): The receiver port number for the stylus (default is 0).
+            head_reference (int): The receiver port number for the head reference (default is 1).
+            data_length (int): The expected length of data for each receiver reading.
 
+        Methods:
+            n_receivers(): Queries the number of active receivers.
+            set_factory_software_defaults(): Resets the device to factory defaults.
+            clear_old_data(): Clears outdated data from the serial buffer.
+            output_metric(): Sets the measurement units to metric.
+            prepare_for_digitisation(): Prepares the device for digitisation use.
+            get_position_relative_to_head_receiver(): Computes the position from the stylus relative to the head receiver.
         """
         self.stylus_receiver = stylus_receiver
         self.head_reference = head_reference
@@ -32,13 +40,21 @@ class FastrakConnector:
             xonxoff=False                   # No software flow control
         )
 
+    def send_serial_command(self, command: bytes, sleep_time = 0.1):
+        try:
+            self.serialobj.write(command)
+            time.sleep(sleep_time) 
+        except serial.SerialTimeoutException:
+            print("Serial write timeout occurred.")
+        except serial.SerialException as e:
+            print(f"Serial communication error: {e}")
+
 
     def n_receivers(self):
-        self.serialobj.write(b'P')  # Send 'P' command to request number of probes
-        time.sleep(0.1) 
+        self.send_serial_command(b'P')  # Send 'P' command to request number of probes
 
         # Initialize the number of receivers
-        self.n_recievers = 0
+        self.n_receivers = 0
 
         # Check for available data in the serial buffer
         while self.serialobj.in_waiting > 0:
@@ -46,11 +62,13 @@ class FastrakConnector:
             line = self.serialobj.readline().decode().strip()  # Read and decode a single line
             
             if line:  # If the line is not empty
-                n_recievers += 1  # Increment receiver count
+                self.n_receivers += 1  # Increment receiver count
 
     def set_factory_software_defaults(self):
-        self.serialobj.write(b'W')  # Send 'W' command
-        time.sleep(0.1)  # Pause for 100 milliseconds
+        """
+        Resets the device to its factory software defaults by sending the appropriate command.
+        """
+        self.send_serial_command(b'W')  # Send 'W' command
 
 
     def clear_old_data(self):
@@ -65,14 +83,13 @@ class FastrakConnector:
         """
         Changes the output to centimeters instead of inches
         """
-        self.serialobj.write(b'u')  # send 'u' command to set metric units
-        time.sleep(0.1)  # pause for 100 ms
+        self.send_serial_command(b'u')  # send 'u' command to set metric units
 
     def prepare_for_digitisation(self):
-        self.set_factory_software_defaults(self.serialobj)
-        self.clear_old_data(self.serialobj)
-        self.output_cm(self.serialobj)
-        self.n_receivers(self.serialobj)
+        self.set_factory_software_defaults()
+        self.clear_old_data()
+        self.output_metric()
+        self.n_receivers()
 
         if self.n_receivers != 2:
             print("Make sure both receivers are connected - stylus in port 1 and head reference in port 2")
