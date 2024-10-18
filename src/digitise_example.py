@@ -34,65 +34,22 @@ if __name__ == "__main__":
     if not output_path.exists():
         output_path.mkdir(parents=True)
 
-    # sensor names 
-    fiducials = ["LA", "RA", "NASION"]
+    fiducials = ["lpa", "rpa", "nasion"]
     OPM_sensors = ["FL52", "FL61", "FL92", "FL99"]
     EEG_sensors = ["Fp1", "Fp2"]
 
-    scalp_surface_size = 60
+    head_surface_size = 60
 
+    connector = FastrakConnector(usb_port='/dev/cu.usbserial-110')
+    connector.prepare_for_digitisation()
 
-    # receiver configuration
-    stylus_receiver = 0
-    head_reference = 1
-
-    # initialize serial object
-    serialobj = serial.Serial(
-        port='/dev/cu.usbserial-110',   # Port name (adjust as necessary)
-        baudrate=115200,                # Baud rate
-        stopbits=serial.STOPBITS_ONE,   # Stop bits (1 stop bit)
-        parity=serial.PARITY_NONE,      # No parity
-        bytesize=serial.EIGHTBITS,      # 8 data bits
-        rtscts=False,                   # No hardware flow control (RTS/CTS)
-        timeout=1,                      # Read timeout in seconds (adjust as needed)
-        write_timeout=1,                # Write timeout in seconds (optional)
-        xonxoff=False                   # No software flow control (XON/XOFF)
-    )
-
-    # configure and prepare for digitization
-    set_factory_software_defaults(serialobj)
-    clear_old_data(serialobj)
-    output_cm(serialobj)
-    n_receivers = get_n_receivers(serialobj)
+    digitiser = Digitiser(connector=connector)
     
-    if n_receivers != 2:
-        print("Make sure both receivers are connected - stylus in port 1 and head reference in port 2")
-        exit()  # Exit script if receivers are not properly connected
+    digitiser.add("fiducials", labels=fiducials, dig_type="single")
+    digitiser.add("OPM", labels=OPM_sensors, dig_type="single")
+    digitiser.add("EEG", labels=EEG_sensors, dig_type="single")
+    digitiser.add("head", n_points=head_surface_size, dig_type="continuous")
 
-    already_digitised = {}
+    digitiser.run_digitisation()
 
-    for sensor_labels, sensor_type in zip([["head"]*scalp_surface_size, fiducials, OPM_sensors, EEG_sensors], ["head_shape", "fiducials", "OPM", "EEG"]):
-        clear_old_data(serialobj) # to make sure any "residue" button presses from previously does not interfere
-
-        if sensor_type == "head_shape":
-            coordinates = mark_headshape(serialobj, n_receivers, scalp_surface_size=scalp_surface_size)
-        
-        else:
-            coordinates = mark_sensors(serialobj, n_receivers, sensor_labels, sensor_type=sensor_type, prev_digitised=already_digitised)
-
-        # so each time we switch sensor types we still keep previous points on the plot
-        already_digitised[sensor_type] = coordinates
-        
-        # save coordinates to CSV file (append mode 'a')
-        with open(output_path / f'{participant_info["participant_id"]}_digitisation.csv', 'a', newline='') as csvfile:
-            writer = csv.writer(csvfile)
-            
-            file_exists = (output_path / f'{participant_info["participant_id"]}_digitisation.csv').exists()
-
-            # only write the header if the file doesn't already exist
-            if not file_exists:
-                writer.writerow(['sensor_type', 'label', 'x', 'y', 'z'])
-            
-            # Write sensor data to the file
-            for idx, label in enumerate(sensor_labels):
-                writer.writerow([sensor_type, label, coordinates[idx, 0], coordinates[idx, 1], coordinates[idx, 2]])
+    digitiser.save_digitisation(output_path=output_path / f'{participant_info["participant_id"]}_digitisation.csv')
