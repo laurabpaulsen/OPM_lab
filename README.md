@@ -38,8 +38,8 @@ digitiser.save_digitisation(output_path='insert/your/path/here.csv')
 ```
 
 Note on dig_type argument in the Digtiser.add() function:
-- `continuous`: Takes a category (for example "OPM") and a list of labels (["FL1", "FL2", "FL3"]). Thus this function is useful for marking marking points with a label attached to them (i.e. if you need to know which specific sensor or fiducial). If you want to re-digtise a point just press the stylus 30 cm away from the head. 
-- `single`: Used for marking a specified amount of points with out any specific label. This could for example be 60 points distributed across the head of the participant. This function allows to keep the button of the stylus pressed down continuosly to mark consecutive points. 
+- `single`: Takes a category (for example "OPM") and a list of labels (["FL1", "FL2", "FL3"]). Thus this function is useful for marking marking points with a label attached to them (i.e. if you need to know which specific sensor or fiducial). If you want to re-digtise a point just press the stylus 30 cm away from the head. 
+- `continuous`: Used for marking a specified amount of points with out any specific label. This could for example be 60 points distributed across the head of the participant. This function allows to keep the button of the stylus pressed down continuosly to mark consecutive points. 
 
 The digitisation will be shown using matplotlib - however sometimes the plot takes a bit to update, and the plot does not show until the first point is made
 
