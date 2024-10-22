@@ -5,7 +5,7 @@ import pickle
 from pathlib import Path
 
 
-def rot3dfit(A, B, verbose=1):
+def rot3dfit(A:np.ndarray, B:np.ndarray, verbose=1):
     """
     TRY NON-linear or affine
 
@@ -64,7 +64,7 @@ def rot3dfit(A, B, verbose=1):
     return R, t, Yf
 
 
-def transform_points(points: np.array, R: np.array, t: np.array):
+def transform_points(points: np.ndarray, R: np.ndarray, t: np.ndarray):
     """
     Transforms a set of 3D points given a orthogonal rotation matrix and a translation vector
 
