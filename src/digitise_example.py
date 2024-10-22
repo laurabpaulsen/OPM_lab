@@ -2,9 +2,6 @@
 
 """
 
-import serial
-import csv
-
 # for local imports
 import sys
 from pathlib import Path
@@ -27,7 +24,6 @@ def get_participant_information():
 
 
 if __name__ == "__main__":
-    # Get participant information
     participant_info = get_participant_information()
     output_path = Path(__file__).parents[1] / "output"
 
