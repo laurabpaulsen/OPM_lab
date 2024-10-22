@@ -5,7 +5,7 @@ import numpy as np
 
 class FastrakConnector:
     def __init__(
-        self, usb_port: str, stylus_receiver=0, head_reference=1, data_length=47
+        self, usb_port: str, stylus_receiver:int=0, head_reference:int=1, data_length:int=47
     ):
         """
         A class to interface with the Polhemus FASTRAK system.
@@ -41,7 +41,7 @@ class FastrakConnector:
             xonxoff=False,  # No software flow control
         )
 
-    def send_serial_command(self, command: bytes, sleep_time=0.1):
+    def send_serial_command(self, command:bytes, sleep_time:float=0.1):
         try:
             self.serialobj.write(command)
             time.sleep(sleep_time)
@@ -65,6 +65,9 @@ class FastrakConnector:
 
             if line:  # If the line is not empty
                 self.n_receivers += 1  # Increment receiver count
+
+        if self.n_receivers != 2:
+            raise ValueError
 
     def set_factory_software_defaults(self):
         """
@@ -132,7 +135,7 @@ class FastrakConnector:
         return sensor_data, sensor_position[:3]
 
 
-def rotate_and_translate(xref, yref, zref, azi, ele, rol, xraw, yraw, zraw):
+def rotate_and_translate(xref:float, yref:float, zref:float, azi:float, ele:float, rol:float, xraw:float, yraw:float, zraw:float):
     # Convert angles to radians
     azi = -np.deg2rad(azi)
     ele = -np.deg2rad(ele)
@@ -182,21 +185,24 @@ def rotate_and_translate(xref, yref, zref, azi, ele, rol, xraw, yraw, zraw):
     xyz = np.dot(ry.T, xyz)
     xyz = np.dot(rx.T, xyz)
 
-    # Return the corrected x, y, z coordinates
-    return xyz[:3]  # Only return the 3D coordinates (ignore the 4th element)
+    return xyz[:3] 
 
 
-def ftformat(fastdata):
-    # Extract specific character slices and convert them to appropriate types
+def ftformat(data):
+    """
+    Extract specific character slices from the data from the fastrak and convert them to appropriate types
+    """
+    
     header = int(
-        fastdata[0:2].strip()
-    )  # Characters 1-2, stripped of whitespace, and converted to integer
-    x = float(fastdata[3:10].strip())  # Characters 4-10, converted to float
-    y = float(fastdata[10:17].strip())  # Characters 11-17, converted to float
-    z = float(fastdata[17:24].strip())  # Characters 18-24, converted to float
-    azimuth = float(fastdata[24:31].strip())  # Characters 25-31, converted to float
-    elevation = float(fastdata[31:38].strip())  # Characters 32-38, converted to float
-    roll = float(fastdata[38:46].strip())  # Characters 39-46, converted to float
+        data[0:2].strip()
+    )
 
-    # Return the parsed values
+    x = float(data[3:10].strip()) 
+    y = float(data[10:17].strip())
+    z = float(data[17:24].strip())
+
+    azimuth = float(data[24:31].strip())
+    elevation = float(data[31:38].strip())
+    roll = float(data[38:46].strip())
+
     return header, x, y, z, azimuth, elevation, roll
