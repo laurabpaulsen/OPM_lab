@@ -10,7 +10,8 @@ from pathlib import Path
 current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
-from OPM_lab.digitising import *
+from OPM_lab.digitising import Digitiser
+from OPM_lab.fastrak_connector import FastrakConnector
 
 
 def get_participant_information():
@@ -41,11 +42,11 @@ if __name__ == "__main__":
 
     digitiser = Digitiser(connector=connector)
     
-    digitiser.add("fiducials", labels=fiducials, dig_type="single")
-    digitiser.add("OPM", labels=OPM_sensors, dig_type="single")
-    digitiser.add("EEG", labels=EEG_sensors, dig_type="single")
-    digitiser.add("head", n_points=head_surface_size, dig_type="continuous")
+    digitiser.add(category="fiducials", labels=fiducials, dig_type="single")
+    digitiser.add(category="OPM", labels=OPM_sensors, dig_type="single")
+    digitiser.add(category="EEG", labels=EEG_sensors, dig_type="single")
+    digitiser.add(category="head", n_points=head_surface_size, dig_type="continuous")
 
     digitiser.run_digitisation()
 
-    digitiser.save_digitisation(output_path=output_path / f'{participant_info["participant_id"]}_digitisation.csv')
+    digitiser.save_digitisation(output_path = output_path / f'{participant_info["participant_id"]}_digitisation.csv')
