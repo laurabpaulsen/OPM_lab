@@ -8,7 +8,7 @@ Under development. This repository holds a module for integrating the (semi)-rig
 ## Polhemus digitisation
 To digtise using this module, you need to make sure you have the `OPM_lab` directory which contains files with functions you will need.
 
-In the `src/digitise_example.py` you will find an example of how to setup the code for running the digitisation. 
+In the `examples/digitise_example.py` you will find an example of how to setup the code for running the digitisation. 
 
 First you need to initialise a FastrakConnector object where you specify the USB port the device is connected to. Afterwards you prepare for digitisation, which will return the fastrak to factory settings, set the output to metric, clear any incoming data and check whether the stylus and head receiver are connected properly. 
 ```
@@ -47,7 +47,17 @@ The digitisation will be shown using matplotlib - however sometimes the plot tak
 Note: during digitisation some sounds are played to provide feedback. However this functionally currently only works on mac
 
 ## Co-registration
-TBD
+TBD - dev notes
+* Update/add sensor positions + orientations
+    * Maybe use sample MEG data to test this?
+    * Template orientation:  shape (3,)
+    * MNE orientation: shape (3,3)
+
+
+    * The digtised points complain when you add MEG channels
+        * Need to update sensor positions and locations directly 
+
+https://mne.discourse.group/t/where-is-the-sensor-location-for-meg-device-pulled-from/5435
 
 ## 🥼 In the lab
 1. Metal strip participant
@@ -60,6 +70,7 @@ TBD
 8. Mark OPMs with felt pen
 9. Measure Z depth of sensors -> may be useful as a sanity check but not needed in the current pipeline
 10. Run experiment
+xx. (mark OPMs again? did the participant move a lot?)
 11. Remove participant from MSR
 12. Digitise (fiducials, OPM-felt pen markers, EEG electrodes, facial features for co-registration with MR)
 
