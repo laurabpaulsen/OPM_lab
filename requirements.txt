@@ -1,0 +1,8 @@
+mne
+serial
+pandas
+mat73
+numpy
+pyqt5
+pyvistaqt
+matpæ
