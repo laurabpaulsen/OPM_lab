@@ -1,7 +1,8 @@
 import sys 
 sys.path.append("OPM_lab")
 
-from OPM_lab.sensor_locations import FL_alpha1_helmet, HelmetTemplate
+from OPM_lab.sensor_locations import OPMSensorLayout
+from OPM_lab.helmet_template import FL_alpha1_helmet
 import pandas as pd
 from pathlib import Path
 import mne
@@ -28,44 +29,6 @@ def add_dig_montage(mne_object, df:pd.DataFrame):
     dig_montage = mne.channels.make_dig_montage(nasion=fiducials["nasion"], lpa=fiducials["lpa"], rpa=fiducials["rpa"], hsp=head_points, coord_frame='head')
 
     mne_object.info.set_montage(dig_montage)
-
-class OPMSensorLayout:
-    def __init__(self, label, depth, helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
-        self.label = label
-        self.depth = depth
-        self.helmet_template = helmet_template
-        self.unit = self.helmet_template.unit
-        self.coil_type = coil_type
-        
-        self.make_sensor_layout()
-
-    def make_sensor_layout(self):
-        # Update template location given the depth measurement
-        self.chan_pos = self.transform_template_depth()
-        self.chan_ori = self.helmet_template.get_chs_ori(self.label)
-    
-    def transform_template_depth(self, len_sleeve:float = 0.075, offset:float = 40/1000): #len_sleeve:float = 75/1000, offset:float = 13/1000
-        template_ori = self.helmet_template.get_chs_ori(self.label)
-        template_pos = self.helmet_template.get_chs_pos(self.label)
-        
-        # Create a new list to store the updated positions
-        transformed_pos = []
-        
-        # Move template pos by measurement length in template ori direction
-        for pos, ori, depth in zip(template_pos, template_ori, self.depth):
-            # Normalize the orientation vector
-            ori = np.array(ori)
-            norm = np.linalg.norm(ori)
-            if norm != 0: # they are all very close to 1 so maybe omit this
-                ori = ori / norm
-                print(f"not norm ={norm}")
-            
-            # Update the position by adding the normalized orientation scaled by the measurement
-            new_pos = np.array(pos) + ori * -(len_sleeve - (depth + offset))
-            transformed_pos.append(new_pos)
-        
-        return np.array(transformed_pos)
-
 
 
 def plot_pos_ori(pos, ori, ax, label = "", c = "b"):
@@ -138,7 +101,7 @@ def add_sensor_layout_to_mne(mne_object, sensor_layout=OPMSensorLayout):
         ch['coil_type'] = sensor_layout.coil_type
 
 
-def get_device_to_head(mne_object, digitised_points, tol = 10):
+def get_device_to_head(mne_object, digitised_points):
     channels = digitised_points[digitised_points["sensor_type"] == "OPM"]
     sensors_head = np.array(channels.loc[:, ["x", "y", "z"]]).squeeze() / 100
     labels = channels["label"]
@@ -160,7 +123,6 @@ def get_device_to_head(mne_object, digitised_points, tol = 10):
     sensors_device = np.array(sensors_device) 
 
     trans = _quat_to_affine(_fit_matched_points(sensors_device, sensors_head)[0])
-    #trans = fit_matched_points(sensors_device, sensors_head, tol = tol)
     mne_object.info["dev_head_t"] = Transform(fro="meg", to="head", trans=trans)
 
 
