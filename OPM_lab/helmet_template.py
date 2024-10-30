@@ -2,7 +2,6 @@ import numpy as np
 import pickle
 from pathlib import Path
 
-
 class HelmetTemplate:
     def __init__(self, chan_ori, chan_pos, label, fid_pos, fid_label, unit):
         self.chan_ori = chan_ori
@@ -71,3 +70,23 @@ template_path = module_dir / "template" / "FL_alpha1_helmet.pkl"
 # Open the file and load the pickle object using the custom unpickler
 with template_path.open("rb") as file:
     FL_alpha1_helmet = CustomUnpickler(file).load()
+
+
+def generate_FL_helmet_template():
+    import mat73
+
+    outpath = Path(__file__).parents[1] / "OPM_lab" / "template"
+    data_dict = mat73.loadmat(outpath / 'fieldlinealpha1.mat')
+    data = data_dict["fieldlinealpha1"]
+
+    FL_template = HelmetTemplate(
+        chan_pos=data["chanpos"],
+        chan_ori=data["chanori"],
+        label=[label[0] for label in data["label"]],
+        fid_label=[label[0] for label in data["fid"]["label"]],
+        fid_pos=data["fid"]["pos"],
+        unit=data["unit"])
+
+    outpath = Path(__file__).parents[1] / "OPM_lab" / "template"
+    with open(outpath / "FL_alpha1_helmet.pkl", 'wb') as file:
+        pickle.dump(FL_template, file)
