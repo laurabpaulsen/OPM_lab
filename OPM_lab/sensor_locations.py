@@ -4,11 +4,12 @@ import matplotlib.pyplot as plt
 import pickle
 from pathlib import Path
 
-def rot3dfit(A, B, verbose = 1):
+
+def rot3dfit(A:np.ndarray, B:np.ndarray, verbose=1):
     """
     TRY NON-linear or affine
 
-    Permforms a least-square fit for the linear form 
+    Permforms a least-square fit for the linear form
     Y = X*R + T
 
     where R is a 3 x 3 orthogonal rotation matrix, t is a 1 x 3
@@ -22,16 +23,16 @@ def rot3dfit(A, B, verbose = 1):
     assert A.shape == B.shape
 
     if A.shape[0] != 3 or B.shape[0] != 3:
-        raise ValueError('A and B must be 3 x N matrices')
+        raise ValueError("A and B must be 3 x N matrices")
 
     # compute centroids (average points over each dimension (x, y, z))
-    centroid_A = np.mean(A, axis=1) 
+    centroid_A = np.mean(A, axis=1)
     centroid_B = np.mean(B, axis=1)
-    
+
     centroid_A = centroid_A.reshape(-1, 1)
     centroid_B = centroid_B.reshape(-1, 1)
 
-    # to find the optimal rotation we first re-centre both dataset 
+    # to find the optimal rotation we first re-centre both dataset
     # so that both centroids are at the origin (subtract mean)
     Ac = A - centroid_A
     Bc = B - centroid_B
@@ -40,15 +41,15 @@ def rot3dfit(A, B, verbose = 1):
     H = Ac @ Bc.T
     U, S, V = np.linalg.svd(H)
     R = V.T @ U.T
-    
+
     if np.linalg.det(R) < 0:
-        V[2,:] *= -1
+        V[2, :] *= -1
         R = V.T @ U.T
 
     # translation vector
-    t = -R @ centroid_A + centroid_B 
+    t = -R @ centroid_A + centroid_B
 
-    # best fit 
+    # best fit
     Yf = R @ A + t
 
     dY = B - Yf
@@ -58,11 +59,12 @@ def rot3dfit(A, B, verbose = 1):
             err = np.linalg.norm(dY[:, point])
             errors.append(err)
 
-        print('Error: ', errors)
-    
+        print("Error: ", errors)
+
     return R, t, Yf
 
-def transform_points(points:np.array, R:np.array, t:np.array):
+
+def transform_points(points: np.ndarray, R: np.ndarray, t: np.ndarray):
     """
     Transforms a set of 3D points given a orthogonal rotation matrix and a translation vector
 
@@ -80,44 +82,35 @@ def transform_points(points:np.array, R:np.array, t:np.array):
 
 def plot_sensor_locations(info):
     loc = []
-    
+
     for i, ch in enumerate(info["chs"]):
         tmp_loc = ch["loc"][:3]  # extract x, y, z
-        loc.append(tmp_loc)  
-    
-    loc = np.array(loc)    
+        loc.append(tmp_loc)
+
+    loc = np.array(loc)
 
     x = loc[:, 0]
     y = loc[:, 1]
     z = loc[:, 2]
 
     # create an array of colors (one color per channel)
-    n_channels = loc.shape[0] 
-    colors = cm.rainbow(np.linspace(0, 1, n_channels)) 
+    n_channels = loc.shape[0]
+    colors = cm.rainbow(np.linspace(0, 1, n_channels))
 
     # creating a 3D scatter plot
     fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(x, y, z, c=colors, marker='o')  # Assign the colors to each point
+    ax = fig.add_subplot(111, projection="3d")
+    ax.scatter(x, y, z, c=colors, marker="o")  # Assign the colors to each point
 
-    ax.set_xlabel('X')
-    ax.set_ylabel('Y')
-    ax.set_zlabel('Z')
+    ax.set_xlabel("X")
+    ax.set_ylabel("Y")
+    ax.set_zlabel("Z")
 
-    plt.show() 
+    plt.show()
 
 
 class HelmetTemplate:
-    def __init__(
-            self, 
-            chan_ori, 
-            chan_pos,
-            label,
-            fid_pos,
-            fid_label,
-            unit
-            ):
-        
+    def __init__(self, chan_ori, chan_pos, label, fid_pos, fid_label, unit):
         self.chan_ori = chan_ori
         self.chan_pos = chan_pos
         self.fid_pos = fid_pos
@@ -136,7 +129,7 @@ class HelmetTemplate:
             list: A list of positions for the specified channels.
         """
         positions = []
-            
+
         for label in labels:
             if label in self.label:
                 index = self.label.index(label)
@@ -145,7 +138,7 @@ class HelmetTemplate:
                 print(f"Label '{label}' not found in the helmet template.")
 
         return positions
-    
+
     def get_chs_ori(self, labels):
         """
         Retrieve the positions of the channels specified by the input labels.
@@ -157,7 +150,7 @@ class HelmetTemplate:
             list: A list of orientations for the specified channels.
         """
         orientations = []
-            
+
         for label in labels:
             if label in self.label:
                 index = self.label.index(label)
@@ -178,19 +171,17 @@ class OPMSensorLayout:
 # custom unpickler to ensure the correct class is found
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
-        if name == 'HelmetTemplate':
+        if name == "HelmetTemplate":
             return HelmetTemplate
         return super().find_class(module, name)
+
 
 # Get the absolute path to the current module's directory
 module_dir = Path(__file__).parent
 
 # Construct the full path to the template file
-template_path = module_dir / 'template' / 'FL_alpha1_helmet.pkl'
+template_path = module_dir / "template" / "FL_alpha1_helmet.pkl"
 
 # Open the file and load the pickle object using the custom unpickler
-with template_path.open('rb') as file:
+with template_path.open("rb") as file:
     FL_alpha1_helmet = CustomUnpickler(file).load()
-
-
-

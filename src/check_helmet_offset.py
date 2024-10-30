@@ -4,33 +4,22 @@ This is done by comparing it to a digitisation of the helmet made using the polh
 """
 
 import sys 
-sys.path.append("../OPM_lab")
-
+from pathlib import Path
+current_file = Path(__file__).resolve()
+parent_directory = current_file.parent.parent 
+sys.path.append(str(parent_directory)) 
 
 import OPM_lab.sensor_locations as sens
 import matplotlib.pyplot as plt
 import pandas as pd
-import mat73
-import numpy as np
 
 
-data_dict = mat73.loadmat('/Users/au661930/Library/CloudStorage/OneDrive-Aarhusuniversitet/Dokumenter/OPM_lab/OPM_lab/template/fieldlinealpha1.mat')
-data = data_dict["fieldlinealpha1"]
-
-template = {
-    "chanori": data["chanori"],
-    "chanpos": data["chanpos"],
-    "label": [lab[0] for lab in data["label"]],
-    "fidlabel": [lab[0] for lab in data["fid"]["label"]],
-    "fidpos": data["fid"]["pos"]
-}
-
-
-helmet = pd.read_csv("//Users/au661930/Library/CloudStorage/OneDrive-Aarhusuniversitet/Dokumenter/OPM_lab/output/helmet_digitisation.csv", names = ['sensor_type', 'label', 'x', 'y', 'z'])
+template = sens.FL_alpha1_helmet
+helmet = pd.read_csv(Path(__file__).parents[1] / "output" / "helmet_digitisation.csv", names = ['sensor_type', 'label', 'x', 'y', 'z'])
 
 digitised_points = pd.DataFrame(helmet[helmet["sensor_type"]== "fiducials"], columns=["x", "y", "z"]).values.T
-template_points = template["fidpos"].T * 100
-template_sensors = template["chanpos"].T * 100
+template_points = template.fid_pos.T * 100
+template_sensors = template.chan_pos.T * 100
 
 R, t, Yf = sens.rot3dfit(digitised_points, template_points)
 
