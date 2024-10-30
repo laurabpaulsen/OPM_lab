@@ -7,6 +7,7 @@ from pathlib import Path
 import mne
 from scipy.spatial.transform import Rotation as R # for conversion from eulers angles to rotation matrix
 import numpy as np
+from mne.utils._bunch import NamedInt
 import matplotlib.pyplot as plt
 from pyvista import Plotter
 from mne.transforms import Transform, _quat_to_affine, _fit_matched_points
@@ -29,11 +30,12 @@ def add_dig_montage(mne_object, df:pd.DataFrame):
     mne_object.info.set_montage(dig_montage)
 
 class OPMSensorLayout:
-    def __init__(self, label, depth, helmet_template:HelmetTemplate):
+    def __init__(self, label, depth, helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
         self.label = label
         self.depth = depth
         self.helmet_template = helmet_template
         self.unit = self.helmet_template.unit
+        self.coil_type = coil_type
         
         self.make_sensor_layout()
 
@@ -132,6 +134,9 @@ def add_sensor_layout_to_mne(mne_object, sensor_layout=OPMSensorLayout):
         print(ori_matrix)
         ch['loc'][3:] = ori_matrix.flatten()
 
+        # update coil type
+        ch['coil_type'] = sensor_layout.coil_type
+
 
 def get_device_to_head(mne_object, digitised_points, tol = 10):
     channels = digitised_points[digitised_points["sensor_type"] == "OPM"]
@@ -175,13 +180,18 @@ if __name__ in "__main__":
                                     "00:02-BZ_CL" : "FL10", 
                                     "00:03-BZ_CL" : "FL16", 
                                     "00:04-BZ_CL" : "FL62"})
+    
+
 
     depth_meas = [40/1000, 47/1000, 44/1000, 40/1000] # mm converted to meter (order = 3, 10, 16, 62)
 
     sensor_layout = OPMSensorLayout(
             label=["FL3", "FL10", "FL16", "FL62"], 
             depth=depth_meas,
-            helmet_template=FL_alpha1_helmet
+            helmet_template=FL_alpha1_helmet,
+            
+            # delete this line, but useful for plotting as orientation of OPMs (default coil types) are difficult to see on alignment plot
+            coil_type=NamedInt("SQ20950N", 3024)
             ) 
    
     """
@@ -201,8 +211,11 @@ if __name__ in "__main__":
 
     add_sensor_layout_to_mne(raw, sensor_layout)
 
+    print(f'updated coil type: {raw.info["chs"][0]["coil_type"]}')
+    print(type(raw.info["chs"][0]["coil_type"]))
+
     get_device_to_head(raw, points)
-    print(raw.info["dev_head_t"])
-    print("Distance from head origin to MEG origin: " + f'{1000 * np.linalg.norm(raw.info["dev_head_t"]["trans"][:3, 3]):.1f} mm')
+    #print(raw.info["dev_head_t"])
+    #print("Distance from head origin to MEG origin: " + f'{1000 * np.linalg.norm(raw.info["dev_head_t"]["trans"][:3, 3]):.1f} mm')
     fig = mne.viz.plot_alignment(raw.info, meg=("sensors"), dig = True, coord_frame="head", verbose = True)  
     Plotter().show()
