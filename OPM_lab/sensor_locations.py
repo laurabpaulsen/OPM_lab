@@ -126,7 +126,7 @@ class HelmetTemplate:
             labels (list): A list of channel labels to retrieve positions for.
 
         Returns:
-            list: A list of positions for the specified channels.
+            np.array: An array of positions for the specified channels.
         """
         positions = []
 
@@ -137,7 +137,7 @@ class HelmetTemplate:
             else:
                 print(f"Label '{label}' not found in the helmet template.")
 
-        return positions
+        return np.array(positions)
 
     def get_chs_ori(self, labels):
         """
@@ -158,16 +158,39 @@ class HelmetTemplate:
             else:
                 print(f"Label '{label}' not found in the helmet template.")
 
-        return orientations
+        return np.array(orientations)
+
 
 
 class OPMSensorLayout:
-    def __init__(self, OPM_ori, OPM_pos, label):
-        self.OPM_ori = OPM_ori
-        self.OPM_pos = OPM_pos
+    def __init__(self, label, depth, helmet_template:HelmetTemplate):
         self.label = label
+        self.depth = depth
+        self.helmet_template = helmet_template
+        self.unit = self.helmet_template.unit
+        
+        self.make_sensor_layout()
 
-
+    def make_sensor_layout(self):
+        # Update template location given the depth measurement
+        self.chan_pos = self.transform_template_depth()
+        self.chan_ori = self.helmet_template.get_chs_ori(self.label)
+    
+    def transform_template_depth(self, len_sleeve:float = 75/1000, offset:float = 13/1000):
+        template_ori = self.helmet_template.get_chs_ori(self.label)
+        template_pos = self.helmet_template.get_chs_pos(self.label)
+        
+        # Create a new list to store the updated positions
+        transformed_pos = []
+        
+        # Move template pos by measurement length in template ori direction
+        for pos, ori, depth in zip(template_pos, template_ori, self.depth):
+            
+            # Update the position by adding the orientation scaled by the measurement
+            new_pos = np.array(pos) + np.array(ori) * -(len_sleeve - (depth + offset))
+            transformed_pos.append(new_pos)
+        
+        return np.array(transformed_pos).T
 # custom unpickler to ensure the correct class is found
 class CustomUnpickler(pickle.Unpickler):
     def find_class(self, module, name):
