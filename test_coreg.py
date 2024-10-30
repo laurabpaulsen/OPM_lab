@@ -128,12 +128,13 @@ def get_device_to_head(mne_object, digitised_points):
 
 
 if __name__ in "__main__":
-    path = Path("/Volumes/untitled/opm_cerebell/20221003/SD/")
-    opm_path = path / "20221003_151904_SD_opm_cerebell_passive_omission_raw.fif"
+    data_path = Path("/Volumes/untitled/opm_cerebell/20221003/001/")
+    opm_path = data_path / "20221003_151904_SD_opm_cerebell_passive_omission_raw.fif"
     raw = mne.io.read_raw(opm_path, preload=True)
 
     raw_old = raw.copy()
-    points = pd.read_csv("/Users/au661930/Library/CloudStorage/OneDrive-Aarhusuniversitet/Dokumenter/project placement/OPM_lab/output/test1_digitisation.csv")
+    dig_path = Path(__file__).parent / "output"
+    points = pd.read_csv(dig_path / "test1_digitisation.csv")
 
 
     raw.pick(["00:01-BZ_CL", '00:02-BZ_CL', "00:03-BZ_CL", "00:04-BZ_CL"])
