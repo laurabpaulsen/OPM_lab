@@ -5,7 +5,7 @@ from OPM_lab.sensor_locations import FL_alpha1_helmet, HelmetTemplate
 import pandas as pd
 from pathlib import Path
 import mne
-#from scipy.spatial.transform import Rotation as R # for conversion from eulers angles to rotation matrix
+from scipy.spatial.transform import Rotation as R # for conversion from eulers angles to rotation matrix
 import numpy as np
 import matplotlib.pyplot as plt
 from pyvista import Plotter
@@ -85,6 +85,8 @@ def plot_pos(pos, ax, label, c="yellow"):
     ax.scatter(pos[0, :], pos[1, :], pos[2,:], color=c, label=f'position {label}')
 
 def vector_to_rotation_matrix(orientation_vector):
+    """
+    CHATGPT SOLUTION....
     # Normalize the input orientation vector (which is the normal vector)
     O = orientation_vector / np.linalg.norm(orientation_vector)
     
@@ -104,10 +106,11 @@ def vector_to_rotation_matrix(orientation_vector):
     
     # Construct the full 3x3 orientation matrix (each row is E_X, E_Y, O)
     orientation_matrix = np.vstack([E_X, E_Y, O])
+    """
     
-
-    """rot = R.from_rotvec(orientation_vector, degrees=False)
-    orientation_matrix = rot.as_matrix()"""
+    rot = R.from_rotvec(orientation_vector, degrees=False) # not sure if the fieldline template orientation is a eulers
+    rot = R.from_euler("xyz", orientation_vector, degrees=False) # not sure if the fieldline template orientation is a rotvec
+    orientation_matrix = rot.as_matrix() # not sure this converts it to the correct type of matrix
     
     return orientation_matrix
 
@@ -181,7 +184,7 @@ if __name__ in "__main__":
             helmet_template=FL_alpha1_helmet
             ) 
    
-
+    """
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
 
@@ -192,7 +195,8 @@ if __name__ in "__main__":
     head_points = points[points["label"] == "head"].loc[:, ["x", "y", "z"]]
     head_points = np.array(head_points).squeeze() / 100
     plot_pos(head_points.T, ax=ax, c="purple", label = "")
-
+    """
+    
     add_dig_montage(raw, points)
 
     add_sensor_layout_to_mne(raw, sensor_layout)
