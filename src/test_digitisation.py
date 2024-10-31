@@ -5,7 +5,7 @@ current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent
 sys.path.append(str(parent_directory))
 
-from OPM_lab.digtise import Digitiser, FastrakConnector
+from OPM_lab.digitise import Digitiser, FastrakConnector
 
 
 if __name__ == "__main__":

@@ -10,8 +10,7 @@ from pathlib import Path
 current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
-from OPM_lab.digtise.digitising import Digitiser
-from OPM_lab.digtise.fastrak_connector import FastrakConnector
+from OPM_lab.digitise import Digitiser, FastrakConnector
 
 
 def get_participant_information():

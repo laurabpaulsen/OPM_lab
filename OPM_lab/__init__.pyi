@@ -2,13 +2,19 @@ __all__ = [
     "Digitiser",
     "DigitisationPlotter",
     "FastrakConnector",
+    "HelmetTemplate",
+    "FL_alpha1_helmet",
+    "OPMSensorLayout"
 ]
 
-from .digitising import (
+from .digitise import (
     Digitiser,
-    DigitisationPlotter
+    DigitisationPlotter,
+    FastrakConnector
 
 )
-from .fastrak_connector import (
-    FastrakConnector
+from .sensor_position import (
+    HelmetTemplate,
+    FL_alpha1_helmet,
+    OPMSensorLayout    
 )
