@@ -1,130 +1,12 @@
 import sys 
 sys.path.append("OPM_lab")
-
-from OPM_lab.sensor_locations import OPMSensorLayout
-from OPM_lab.helmet_template import FL_alpha1_helmet
+from OPM_lab.sensor_position import OPMSensorLayout, FL_alpha1_helmet
+from OPM_lab.mne_integration import add_device_to_head, add_dig_montage, add_sensor_layout
 import pandas as pd
 from pathlib import Path
 import mne
-from scipy.spatial.transform import Rotation as R # for conversion from eulers angles to rotation matrix
-import numpy as np
 from mne.utils._bunch import NamedInt
-import matplotlib.pyplot as plt
 from pyvista import Plotter
-from mne.transforms import Transform, _quat_to_affine, _fit_matched_points
-
-def add_dig_montage(mne_object, df:pd.DataFrame):
-    fiducials = {}
-
-    for label in ["nasion", "lpa", "rpa"]:
-        fid = df[df["label"] == label].loc[:, ["x", "y", "z"]]
-        fiducials[label] = np.array(fid).squeeze() / 100  # converting to meter!
-
-    head_points = df[df["label"] == "head"].loc[:, ["x", "y", "z"]] /100
-    
-    # DELETE THE TWO FOLLOWING LINES JUST FOR CHECKING
-    OPMs = df[df["sensor_type"] == "OPM"].loc[:, ["x", "y", "z"]] /100 
-    head_points = pd.concat([head_points, OPMs])
-
-    dig_montage = mne.channels.make_dig_montage(nasion=fiducials["nasion"], lpa=fiducials["lpa"], rpa=fiducials["rpa"], hsp=head_points, coord_frame='head')
-
-    mne_object.info.set_montage(dig_montage)
-
-
-def plot_pos_ori(pos, ori, ax, label = "", c = "b"):
-
-    # Plot positions
-    ax.scatter(pos[0, :], pos[1, :], pos[2,:], color=c, label=f'position {label}')
-
-    # Plot orientations as arrows
-    for i in range(pos.shape[-1]):
-        x, y, z = pos[:, i]
-        u, v, w = ori[i]
-        
-        ax.quiver(x, y, z, u, v, w, length=0.01, normalize=True, color=c, label=f'Orientation {label}' if i == 0 else "")
-        # Simple representation of orientation using arrows (may need adjustments based on actual orientation representation)
-        #ax.quiver(x, y, z, np.cos(yaw), np.sin(yaw), 0, length=0.02, color=c, label=f'Orientation {label}' if i == 0 else "")
-
-def plot_pos(pos, ax, label, c="yellow"):
-    # Plot positions
-    ax.scatter(pos[0, :], pos[1, :], pos[2,:], color=c, label=f'position {label}')
-
-def vector_to_rotation_matrix(orientation_vector):
-    """
-    CHATGPT SOLUTION....
-    # Normalize the input orientation vector (which is the normal vector)
-    O = orientation_vector / np.linalg.norm(orientation_vector)
-    
-    # Step 2: Choose an arbitrary vector that is not collinear with O
-    # Here we use the x-axis unit vector [1, 0, 0] unless O is close to it.
-    if np.allclose(O, [1, 0, 0]):  # If O is along the x-axis, use y-axis as arbitrary vector
-        v1 = np.array([0, 1, 0])
-    else:
-        v1 = np.array([1, 0, 0])
-    
-    # Step 3: Compute E_X as the orthogonal projection of v1 onto the plane of O
-    E_X = v1 - np.dot(v1, O) * O  # Remove the component of v1 in the direction of O
-    E_X /= np.linalg.norm(E_X)  # Normalize E_X
-    
-    # Step 4: Compute E_Y as the cross product of O and E_X (to ensure orthogonality)
-    E_Y = np.cross(O, E_X)
-    
-    # Construct the full 3x3 orientation matrix (each row is E_X, E_Y, O)
-    orientation_matrix = np.vstack([E_X, E_Y, O])
-    """
-    
-    rot = R.from_rotvec(orientation_vector, degrees=False) # not sure if the fieldline template orientation is a eulers
-    rot = R.from_euler("xyz", orientation_vector, degrees=False) # not sure if the fieldline template orientation is a rotvec
-    orientation_matrix = rot.as_matrix() # not sure this converts it to the correct type of matrix
-    
-    return orientation_matrix
-
-def add_sensor_layout_to_mne(mne_object, sensor_layout=OPMSensorLayout):
-    for pos, ori, label in zip(sensor_layout.chan_pos, sensor_layout.chan_ori, sensor_layout.label):
-        idx = None
-
-        # Find the channel with the label in the info of the mne object
-        for idx_tmp, ch in enumerate(mne_object.info["chs"]):
-            mne_ch_name = ch["ch_name"]
-            if mne_ch_name == label:
-                idx = idx_tmp
-                break
-
-        # Update the location of that channel
-        mne_object.info['chs'][idx]['loc'][:3] = pos
-
-        ori_matrix = vector_to_rotation_matrix(ori)
-        print(ori_matrix)
-        ch['loc'][3:] = ori_matrix.flatten()
-
-        # update coil type
-        ch['coil_type'] = sensor_layout.coil_type
-
-
-def get_device_to_head(mne_object, digitised_points):
-    channels = digitised_points[digitised_points["sensor_type"] == "OPM"]
-    sensors_head = np.array(channels.loc[:, ["x", "y", "z"]]).squeeze() / 100
-    labels = channels["label"]
-
-    sensors_device = []
-    
-    for label in labels:
-
-        idx = None
-        # Find the channel with the label in the info of the mne object
-        for idx_tmp, ch in enumerate(mne_object.info["chs"]):
-            mne_ch_name = ch["ch_name"]
-            if mne_ch_name == label:
-                idx = idx_tmp
-                break
-
-        sensors_device.append(mne_object.info['chs'][idx]['loc'][:3])
-
-    sensors_device = np.array(sensors_device) 
-
-    trans = _quat_to_affine(_fit_matched_points(sensors_device, sensors_head)[0])
-    mne_object.info["dev_head_t"] = Transform(fro="meg", to="head", trans=trans)
-
 
 
 if __name__ in "__main__":
@@ -135,7 +17,6 @@ if __name__ in "__main__":
     raw_old = raw.copy()
     dig_path = Path(__file__).parent / "output"
     points = pd.read_csv(dig_path / "test1_digitisation.csv")
-
 
     raw.pick(["00:01-BZ_CL", '00:02-BZ_CL', "00:03-BZ_CL", "00:04-BZ_CL"])
 
@@ -157,27 +38,15 @@ if __name__ in "__main__":
             coil_type=NamedInt("SQ20950N", 3024)
             ) 
    
-    """
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-
-
-    plot_pos_ori(FL_alpha1_helmet.chan_pos.T, FL_alpha1_helmet.chan_ori, ax=ax, label = "helmet template",)
-    plot_pos_ori(sensor_layout.chan_pos.T, sensor_layout.chan_ori, ax=ax, c="red")
-
-    head_points = points[points["label"] == "head"].loc[:, ["x", "y", "z"]]
-    head_points = np.array(head_points).squeeze() / 100
-    plot_pos(head_points.T, ax=ax, c="purple", label = "")
-    """
     
     add_dig_montage(raw, points)
 
-    add_sensor_layout_to_mne(raw, sensor_layout)
+    add_sensor_layout(raw, sensor_layout)
 
     print(f'updated coil type: {raw.info["chs"][0]["coil_type"]}')
     print(type(raw.info["chs"][0]["coil_type"]))
 
-    get_device_to_head(raw, points)
+    add_device_to_head(raw, points)
     #print(raw.info["dev_head_t"])
     #print("Distance from head origin to MEG origin: " + f'{1000 * np.linalg.norm(raw.info["dev_head_t"]["trans"][:3, 3]):.1f} mm')
     fig = mne.viz.plot_alignment(raw.info, meg=("sensors"), dig = True, coord_frame="head", verbose = True)  
