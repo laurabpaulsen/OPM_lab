@@ -1,7 +1,8 @@
 mne
-serial
+pyserial
 pandas
 mat73
 numpy
 pyqt5
 pyvistaqt
+lazy-loader
