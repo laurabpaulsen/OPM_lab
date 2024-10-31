@@ -9,7 +9,7 @@ current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
 
-import OPM_lab.sensor_locations as sens
+import OPM_lab.sensor_position.helmet_layout as sens
 import matplotlib.pyplot as plt
 import pandas as pd
 

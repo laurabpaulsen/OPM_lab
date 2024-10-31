@@ -10,35 +10,6 @@ BASE_DIR = Path(__file__).resolve().parent
 SOUND_DIR = BASE_DIR / "soundfiles"
 
 
-def play_sound(sound_type):
-    if sound_type == "beep":
-        os.system(f'afplay "{SOUND_DIR / "beep.wav"}"')
-    elif sound_type == "wrong":
-        os.system(f'afplay "{SOUND_DIR / "wrongbeep.wav"}"')
-    elif sound_type == "done":
-        os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
-
-
-def idx_of_next_point(distance:float, idx:int, limit:float=30.):
-    # if stylus was clicked more than limit away from the head reference, the last point is undone
-    if distance > limit:
-        play_sound("wrong")
-        if idx == 0:
-            return 0, False
-        else:
-            return idx - 1, False
-    else:  # moving on to the next
-        play_sound("beep")
-        return idx + 1, True
-
-
-def calculate_distance(point1:tuple, point2:tuple):
-    # unpack the coordinates of point1 and point2
-    x1, y1, z1 = point1
-    x2, y2, z2 = point2
-
-    return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
-
 
 class DigitisationPlotter:
     def __init__(self, set_axes_limits:bool=True):
@@ -200,7 +171,7 @@ class Digitiser:
             idx += 1  # Move to the next point
             self.plotter.refresh_plot()
 
-        play_sound("done")
+        self.play_sound("done")
 
     def digitise_single(self, category:str, labels:list[str], limit:int=30):
         """ """
@@ -225,8 +196,8 @@ class Digitiser:
             point2 = (sensor_data[1, 1], sensor_data[2, 1], sensor_data[3, 1])
 
             # adjust the index based on whether the point is valid or needs to be undone (i.e. more than 30 cm away from head receiver)
-            idx, cont = idx_of_next_point(
-                calculate_distance(point1, point2), idx, limit=limit
+            idx, cont = self.idx_of_next_point(
+                self.calculate_distance(point1, point2), idx, limit=limit
             )
 
             if idx <= len(labels) - 1:
@@ -277,3 +248,37 @@ class Digitiser:
             output_path (Path or str): path to save a csv file with the digitised points
         """
         self.digitised_points.to_csv(output_path, index=False)
+    
+    @staticmethod
+    def calculate_distance(point1:tuple, point2:tuple):
+        # unpack the coordinates of point1 and point2
+        x1, y1, z1 = point1
+        x2, y2, z2 = point2
+
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
+    
+    @staticmethod
+    def idx_of_next_point(distance:float, idx:int, limit:float=30.):
+        # if stylus was clicked more than limit away from the head reference, the last point is undone
+        if distance > limit:
+            self.play_sound("wrong")
+            if idx == 0:
+                return 0, False
+            else:
+                return idx - 1, False
+        else:  # moving on to the next
+            self.play_sound("beep")
+            return idx + 1, True
+
+    @staticmethod
+    def play_sound(sound_type):
+        if sound_type == "beep":
+            os.system(f'afplay "{SOUND_DIR / "beep.wav"}"')
+        elif sound_type == "wrong":
+            os.system(f'afplay "{SOUND_DIR / "wrongbeep.wav"}"')
+        elif sound_type == "done":
+            os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
+
+
+
+

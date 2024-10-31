@@ -1,38 +1,6 @@
-import numpy as np
-from matplotlib import cm
-import matplotlib.pyplot as plt
-from .helmet_template import HelmetTemplate
+import numpy as np 
+from .helmet_layout import HelmetTemplate
 from mne.utils._bunch import NamedInt
-
-
-def plot_sensor_locations(info):
-    loc = []
-
-    for i, ch in enumerate(info["chs"]):
-        tmp_loc = ch["loc"][:3]  # extract x, y, z
-        loc.append(tmp_loc)
-
-    loc = np.array(loc)
-
-    x = loc[:, 0]
-    y = loc[:, 1]
-    z = loc[:, 2]
-
-    # create an array of colors (one color per channel)
-    n_channels = loc.shape[0]
-    colors = cm.rainbow(np.linspace(0, 1, n_channels))
-
-    # creating a 3D scatter plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection="3d")
-    ax.scatter(x, y, z, c=colors, marker="o")  # Assign the colors to each point
-
-    ax.set_xlabel("X")
-    ax.set_ylabel("Y")
-    ax.set_zlabel("Z")
-
-    plt.show()
-
 
 class OPMSensorLayout:
     def __init__(self, label, depth, helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):

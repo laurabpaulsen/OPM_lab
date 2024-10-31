@@ -6,7 +6,7 @@ This is done by comparing it to a digitisation of the helmet made using the polh
 import sys 
 sys.path.append("../OPM_lab")
 
-import OPM_lab.sensor_locations as sens
+import OPM_lab.sensor_position.helmet_layout as sens
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np

@@ -4,8 +4,8 @@ from pathlib import Path
 current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent
 sys.path.append(str(parent_directory))
-from OPM_lab.digitising import Digitiser
-from OPM_lab.fastrak_connector import FastrakConnector
+
+from OPM_lab.digtise import Digitiser, FastrakConnector
 
 
 if __name__ == "__main__":

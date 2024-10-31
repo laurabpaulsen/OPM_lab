@@ -109,7 +109,7 @@ class FastrakConnector:
 
         for j in range(self.n_receivers):
             ftstring = self.serialobj.readline().decode().strip()
-            header, x, y, z, azimuth, elevation, roll = ftformat(ftstring)
+            header, x, y, z, azimuth, elevation, roll = self.ftformat(ftstring)
 
             sensor_data[0, j] = header
             sensor_data[1, j] = x
@@ -120,7 +120,7 @@ class FastrakConnector:
             sensor_data[6, j] = roll
 
         # Get sensor position relative to head reference
-        sensor_position = rotate_and_translate(
+        sensor_position = self.rotate_and_translate(
             sensor_data[1, self.head_reference],
             sensor_data[2, self.head_reference],
             sensor_data[3, self.head_reference],
@@ -134,75 +134,75 @@ class FastrakConnector:
 
         return sensor_data, sensor_position[:3]
 
+    @staticmethod
+    def rotate_and_translate(xref:float, yref:float, zref:float, azi:float, ele:float, rol:float, xraw:float, yraw:float, zraw:float):
+        # Convert angles to radians
+        azi = -np.deg2rad(azi)
+        ele = -np.deg2rad(ele)
+        rol = -np.deg2rad(rol)
 
-def rotate_and_translate(xref:float, yref:float, zref:float, azi:float, ele:float, rol:float, xraw:float, yraw:float, zraw:float):
-    # Convert angles to radians
-    azi = -np.deg2rad(azi)
-    ele = -np.deg2rad(ele)
-    rol = -np.deg2rad(rol)
+        # Rotation matrix around x-axis (roll)
+        rx = np.array(
+            [
+                [1, 0, 0, 0],
+                [0, np.cos(rol), np.sin(rol), 0],
+                [0, -np.sin(rol), np.cos(rol), 0],
+                [0, 0, 0, 1],
+            ]
+        )
 
-    # Rotation matrix around x-axis (roll)
-    rx = np.array(
-        [
-            [1, 0, 0, 0],
-            [0, np.cos(rol), np.sin(rol), 0],
-            [0, -np.sin(rol), np.cos(rol), 0],
-            [0, 0, 0, 1],
-        ]
-    )
+        # Rotation matrix around y-axis (elevation)
+        ry = np.array(
+            [
+                [np.cos(ele), 0, -np.sin(ele), 0],
+                [0, 1, 0, 0],
+                [np.sin(ele), 0, np.cos(ele), 0],
+                [0, 0, 0, 1],
+            ]
+        )
 
-    # Rotation matrix around y-axis (elevation)
-    ry = np.array(
-        [
-            [np.cos(ele), 0, -np.sin(ele), 0],
-            [0, 1, 0, 0],
-            [np.sin(ele), 0, np.cos(ele), 0],
-            [0, 0, 0, 1],
-        ]
-    )
+        # Rotation matrix around z-axis (azimuth)
+        rz = np.array(
+            [
+                [np.cos(azi), np.sin(azi), 0, 0],
+                [-np.sin(azi), np.cos(azi), 0, 0],
+                [0, 0, 1, 0],
+                [0, 0, 0, 1],
+            ]
+        )
 
-    # Rotation matrix around z-axis (azimuth)
-    rz = np.array(
-        [
-            [np.cos(azi), np.sin(azi), 0, 0],
-            [-np.sin(azi), np.cos(azi), 0, 0],
-            [0, 0, 1, 0],
-            [0, 0, 0, 1],
-        ]
-    )
+        # Translation matrix
+        tm = np.array([[1, 0, 0, -xref], [0, 1, 0, -yref], [0, 0, 1, -zref], [0, 0, 0, 1]])
 
-    # Translation matrix
-    tm = np.array([[1, 0, 0, -xref], [0, 1, 0, -yref], [0, 0, 1, -zref], [0, 0, 0, 1]])
+        # Raw data as a 4x1 matrix (homogeneous coordinates)
+        xyzraw = np.array([xraw, yraw, zraw, 1])
 
-    # Raw data as a 4x1 matrix (homogeneous coordinates)
-    xyzraw = np.array([xraw, yraw, zraw, 1])
+        # Translate the raw data
+        xyzt = np.dot(tm, xyzraw)
 
-    # Translate the raw data
-    xyzt = np.dot(tm, xyzraw)
+        # Apply inverse rotations to align the point with the reference frame
+        xyz = np.dot(rz.T, xyzt)
+        xyz = np.dot(ry.T, xyz)
+        xyz = np.dot(rx.T, xyz)
 
-    # Apply inverse rotations to align the point with the reference frame
-    xyz = np.dot(rz.T, xyzt)
-    xyz = np.dot(ry.T, xyz)
-    xyz = np.dot(rx.T, xyz)
+        return xyz[:3] 
 
-    return xyz[:3] 
+    @staticmethod
+    def ftformat(data):
+        """
+        Extract specific character slices from the data from the fastrak and convert them to appropriate types
+        """
+        
+        header = int(
+            data[0:2].strip()
+        )
 
+        x = float(data[3:10].strip()) 
+        y = float(data[10:17].strip())
+        z = float(data[17:24].strip())
 
-def ftformat(data):
-    """
-    Extract specific character slices from the data from the fastrak and convert them to appropriate types
-    """
-    
-    header = int(
-        data[0:2].strip()
-    )
+        azimuth = float(data[24:31].strip())
+        elevation = float(data[31:38].strip())
+        roll = float(data[38:46].strip())
 
-    x = float(data[3:10].strip()) 
-    y = float(data[10:17].strip())
-    z = float(data[17:24].strip())
-
-    azimuth = float(data[24:31].strip())
-    elevation = float(data[31:38].strip())
-    roll = float(data[38:46].strip())
-
-    return header, x, y, z, azimuth, elevation, roll
+        return header, x, y, z, azimuth, elevation, roll

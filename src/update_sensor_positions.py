@@ -14,7 +14,7 @@ current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
 
-from OPM_lab.sensor_locations import FL_alpha1_helmet, HelmetTemplate, rot3dfit
+from OPM_lab.sensor_position.helmet_layout import FL_alpha1_helmet, HelmetTemplate, rot3dfit
 
 
 print(np.min(FL_alpha1_helmet.chan_ori), np.max(FL_alpha1_helmet.chan_ori))
