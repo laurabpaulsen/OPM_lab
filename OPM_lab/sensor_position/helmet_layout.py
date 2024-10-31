@@ -2,7 +2,42 @@ import numpy as np
 import pickle
 from pathlib import Path
 
-class HelmetTemplate:
+class HelmetTemplate:    
+    """
+    A class representing the template layout of a helmet with positions and orientations of sensor slots.
+    It stores positions, orientations, fiducial positions, and associated labels, 
+    allowing retrieval of channel-specific data by label.
+
+    Parameters
+    ----------
+    chan_ori : list of lists
+        A list containing orientation vectors (3D) for each sensor channel.
+    chan_pos : list of lists
+        A list containing position vectors (3D) for each sensor channel.
+    label : list of str
+        A list of labels for each sensor channel.
+    fid_pos : list of lists
+        A list containing position vectors for each fiducial point on the helmet.
+    fid_label : list of str
+        A list of labels for each fiducial point.
+    unit : str
+        The unit of measurement for the positions (e.g., "mm" for millimeters).
+
+    Attributes
+    ----------
+    chan_ori : list of lists
+        Orientation vectors of each channel in the helmet template.
+    chan_pos : list of lists
+        Position vectors of each channel in the helmet template.
+    fid_pos : list of lists
+        Position vectors for fiducial points on the helmet.
+    fid_label : list of str
+        Labels associated with fiducial points on the helmet.
+    label : list of str
+        Labels identifying each sensor channel.
+    unit : str
+        Unit of measurement for position values.
+    """
     def __init__(self, chan_ori, chan_pos, label, fid_pos, fid_label, unit):
         self.chan_ori = chan_ori
         self.chan_pos = chan_pos
