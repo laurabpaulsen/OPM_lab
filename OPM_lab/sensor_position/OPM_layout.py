@@ -3,7 +3,45 @@ from .helmet_layout import HelmetTemplate
 from mne.utils._bunch import NamedInt
 
 class OPMSensorLayout:
-    def __init__(self, label, depth, helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
+    def __init__(self, label:list[str], depth:list[float], helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
+        """
+        Represents the layout of an Optically Pumped Magnetometer (OPM) sensor array
+        within a helmet template. This layout uses orientation and depth measurements to
+        position sensors on a helmet model, adjusting their locations according to 
+        measured depth and orientation.
+
+        Parameters
+        ----------
+        label : list[str]
+            The labels of the sensors, used to identify it in the helmet template (as all sensors slots may not be used).
+        depth : list[float]
+            A list of depth measurements for channel, affecting sensor 
+            positioning within the template.
+        helmet_template : HelmetTemplate
+            An instance of the HelmetTemplate class, providing the base template for
+            sensor positioning and orientation.
+        coil_type : NamedInt, optional
+            The coil type of the OPM, specified as a NamedInt. Default is 
+            NamedInt("FieldLine OPM sensor Gen1 size = 2.00 mm", 8101).
+
+        Attributes
+        ----------
+        label : list[str]
+            The labels identifying the sensor in the template.
+        depth : list[float]
+            Depth measurements.
+        helmet_template : HelmetTemplate
+            The helmet template providing OPM position and orientation.
+        unit : str
+            The unit of measurement from the helmet template.
+        coil_type : NamedInt
+            The coil type associated with the channel (see https://github.com/mne-tools/mne-python/blob/main/mne/data/coil_def.dat).
+        chan_pos : np.ndarray
+            Array containing the transformed channel positions after accounting for depth measurement
+        chan_ori : list
+            List of orientation vectors for each channel.
+        """
+
         self.label = label
         self.depth = depth
         self.helmet_template = helmet_template
@@ -31,7 +69,6 @@ class OPMSensorLayout:
             norm = np.linalg.norm(ori)
             if norm != 0: # they are all very close to 1 so maybe omit this
                 ori = ori / norm
-                print(f"not norm ={norm}")
             
             # Update the position by adding the normalized orientation scaled by the measurement
             new_pos = np.array(pos) + ori * -(len_sleeve - (depth + offset))
