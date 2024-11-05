@@ -2,7 +2,8 @@ __all__ = [
     "HelmetTemplate",
     "OPMSensorLayout",
     "FastrakConnector",
-    "FL_alpha1_helmet"
+    "FL_alpha1_helmet",
+    "EEGcapTemplate"
 ]
 from .helmet_layout import (
     HelmetTemplate,
