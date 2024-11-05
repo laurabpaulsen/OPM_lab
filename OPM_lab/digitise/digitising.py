@@ -1,40 +1,68 @@
 import matplotlib.pyplot as plt
+from matplotlib import gridspec
 import os
 import math
 import pandas as pd
 from pathlib import Path
 from .fastrak_connector import FastrakConnector
+from ..sensor_position import HelmetTemplate
 
-
-BASE_DIR = Path(__file__).resolve().parent
+BASE_DIR = Path(__file__).resolve().parents[1]
 SOUND_DIR = BASE_DIR / "soundfiles"
 
 
 
 class DigitisationPlotter:
-    def __init__(self, set_axes_limits:bool=True):
-        self.fig, self.ax_3d, self.ax_text = self.setup_figure(set_axes_limits)
+    def __init__(self, helmet_template:HelmetTemplate, set_axes_limits:bool=True):
+        self.fig, self.ax_dig, self.ax_helmet, self.ax_text = self.setup_figure(set_axes_limits)
+        self.helmet_template = helmet_template
+
+    import matplotlib.pyplot as plt
+
 
     def setup_figure(self, set_axes_limits=True):
-        # Set up the figure with two subplots: one for 3D plot, one for messages
-        fig = plt.figure(figsize=(10, 6))
+        # Set up the figure with a GridSpec layout to better control subplot positions
+        fig = plt.figure(figsize=(15, 6))
+        gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1, 0.3], wspace=0.4)  # Adjust width_ratios and wspace for spacing
 
-        # 3D plot subplot
-        ax_3d = fig.add_subplot(121, projection="3d")
-        ax_3d.set_xlabel("X")
-        ax_3d.set_ylabel("Y")
-        ax_3d.set_zlabel("Z")
-        ax_3d.set_title("Points Digitised")
+        # 3D plot subplot for digitised points
+        ax_dig = fig.add_subplot(gs[0], projection="3d")
+        ax_dig.set_xlabel("X")
+        ax_dig.set_ylabel("Y")
+        ax_dig.set_zlabel("Z")
+        ax_dig.set_title("Points Digitised")
         if set_axes_limits:
-            ax_3d.set_xlim([-30, 30])
-            ax_3d.set_ylim([-30, 30])
-            ax_3d.set_zlim([-30, 30])
+            ax_dig.set_xlim([-30, 30])
+            ax_dig.set_ylim([-30, 30])
+            ax_dig.set_zlim([-30, 30])
 
-        # Textbox subplot
-        ax_text = fig.add_subplot(122)
+        # 3D plot subplot for OPM helmet template
+        ax_helmet = fig.add_subplot(gs[1], projection="3d")
+        ax_helmet.set_xlabel("X")
+        ax_helmet.set_ylabel("Y")
+        ax_helmet.set_zlabel("Z")
+        ax_helmet.set_title("OPM Helmet Template")
+
+
+        # Textbox subplot with spacing for messages
+        ax_text = fig.add_subplot(gs[2])
         ax_text.axis("off")
 
-        return fig, ax_3d, ax_text
+        return fig, ax_dig, ax_helmet, ax_text
+
+    
+    
+    def helmet_plot(self, marked_sensors = list[str], focused_sensor:str = None):
+        for pos in self.helmet_template.chan_pos:
+            self.ax_helmet.scatter(*pos, c="lightblue", label="all sensors", alpha=0.7, s=30, marker="s")
+        
+        for pos in self.helmet_template.get_chs_pos(marked_sensors):
+            self.ax_helmet.scatter(*pos, c="blue", label="all sensors", alpha=0.6, s=8)
+        
+        if isinstance(focused_sensor, str): 
+            focus = self.helmet_template.get_chs_pos([focused_sensor])[0]
+            self.ax_helmet.scatter(*focus, c="red", label="all sensors", alpha=1, s=20)
+    
 
     def update_message_box(self, category:str, label:str, message:str):
         """Updates the message box with the current sensor information."""
@@ -62,9 +90,14 @@ class DigitisationPlotter:
             alpha = 0.2
             size = 3
 
-        self.ax_3d.scatter(x, y, z, c=color, label=category, alpha=alpha, s=size)
+        self.ax_dig.scatter(x, y, z, c=color, label=category, alpha=alpha, s=size)
 
     def refresh_plot(self):
+        """Refreshes the plot to reflect any new changes."""
+        plt.draw()
+        plt.pause(0.3)
+
+    def refresh_plot_fast(self):
         """Refreshes the plot to reflect any new changes."""
         plt.draw()
         plt.pause(0.1)
@@ -78,7 +111,8 @@ class Digitiser:
     def __init__(
         self, 
         connector: FastrakConnector,
-        digtisation_scheme: list[dict] = []
+        helmet_template: HelmetTemplate,
+        digtisation_scheme: list[dict] = [],
     ):
         """
         Args:
@@ -90,7 +124,7 @@ class Digitiser:
             columns=["category", "label", "x", "y", "z"]
         )
         self.digitisation_scheme = digtisation_scheme
-        self.plotter = DigitisationPlotter()
+        self.plotter = DigitisationPlotter(helmet_template)
 
     def add(self, category:str, labels:list[str]=[], dig_type:str="single", n_points=None):
         """
@@ -169,7 +203,7 @@ class Digitiser:
             )
 
             idx += 1  # Move to the next point
-            self.plotter.refresh_plot()
+            self.plotter.refresh_plot_fast()
 
         self.play_sound("done")
 
@@ -181,12 +215,16 @@ class Digitiser:
 
         idx = 0
 
+        if category == "OPM":
+            self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx])
+
         self.plotter.update_message_box(
             label=labels[idx], category=category, message="Ready for digitization..."
         )
         self.plotter.refresh_plot()
 
         while idx < len(labels):
+            print(idx)
             sensor_data, position = (
                 self.connector.get_position_relative_to_head_receiver()
             )
@@ -204,6 +242,8 @@ class Digitiser:
                 self.plotter.update_message_box(
                     label=labels[idx], category=category, message="Now digitising:"
                 )
+                if category == "OPM":
+                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx])
 
             if cont:
                 self.update_digitised_data(
@@ -213,6 +253,8 @@ class Digitiser:
             else:
                 # remove the last row of the digitised points
                 self.digitised_points = self.digitised_points.head(-1)
+            
+        
 
             self.plotter.refresh_plot()
 
@@ -257,8 +299,7 @@ class Digitiser:
 
         return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
     
-    @staticmethod
-    def idx_of_next_point(distance:float, idx:int, limit:float=30.):
+    def idx_of_next_point(self, distance:float, idx:int, limit:float=30.,):
         # if stylus was clicked more than limit away from the head reference, the last point is undone
         if distance > limit:
             self.play_sound("wrong")
@@ -269,7 +310,7 @@ class Digitiser:
         else:  # moving on to the next
             self.play_sound("beep")
             return idx + 1, True
-
+        
     @staticmethod
     def play_sound(sound_type):
         if sound_type == "beep":
@@ -279,6 +320,9 @@ class Digitiser:
         elif sound_type == "done":
             os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
 
+
+
+    
 
 
 
