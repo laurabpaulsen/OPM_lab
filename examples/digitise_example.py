@@ -5,13 +5,14 @@
 # for local imports
 import sys
 from pathlib import Path
+import mne
 
 # make sure to append path to OPM_lab
 current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
 from OPM_lab.digitise import Digitiser, FastrakConnector
-from OPM_lab.sensor_position import FL_alpha1_helmet
+from OPM_lab.sensor_position import FL_alpha1_helmet, EEGcapTemplate
 
 
 def get_participant_information():
@@ -24,6 +25,7 @@ def get_participant_information():
     return participant_info
 
 
+
 if __name__ == "__main__":
     participant_info = get_participant_information()
     output_path = Path(__file__).parents[1] / "output"
@@ -32,8 +34,8 @@ if __name__ == "__main__":
         output_path.mkdir(parents=True)
 
     fiducials = ["lpa", "rpa", "nasion"]
-    OPM_sensors = ["FL59", "FL105", "FL106", "FL103", "FL102", "FL107", "FL104", "FL61","FL60", "FL99", "FL83", "FL84", "FL98", "FL57", "FL58"]
-    EEG_sensors = ["Fp1", "Fp2"]
+    OPM_sensors = ['FL57', 'FL58', 'FL59', 'FL60', 'FL61', 'FL83', 'FL84', 'FL98', 'FL99', 'FL102', 'FL103', 'FL104', 'FL105', 'FL106', 'FL107']
+    EEG_sensors = ["Fp1", "Fp2", "Fz", "T8"]
 
     head_surface_size = 60
 
@@ -44,7 +46,7 @@ if __name__ == "__main__":
     
     digitiser.add(category="fiducials", labels=fiducials, dig_type="single")
     digitiser.add(category="OPM", labels=OPM_sensors, dig_type="single", template=FL_alpha1_helmet)
-    digitiser.add(category="EEG", labels=EEG_sensors, dig_type="single")
+    digitiser.add(category="EEG", labels=EEG_sensors, dig_type="single", template= EEGcapTemplate("easycap-M1"))
     digitiser.add(category="head", n_points=head_surface_size, dig_type="continuous")
 
     digitiser.run_digitisation()

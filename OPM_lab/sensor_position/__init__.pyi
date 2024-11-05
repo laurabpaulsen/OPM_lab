@@ -12,3 +12,6 @@ from .helmet_layout import (
 from .OPM_layout import (
     OPMSensorLayout
 )
+from .EEG_layout import (
+    EEGcapTemplate
+)

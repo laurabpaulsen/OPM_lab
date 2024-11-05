@@ -207,7 +207,7 @@ class Digitiser:
             data, position = self.connector.get_position_relative_to_head_receiver()
 
             self.plotter.update_message_box(
-                    label="", category=category,
+                    label="", category=category, label=f"{idx}/{n_points}",
                 )
 
             self.update_digitised_data(
@@ -219,7 +219,7 @@ class Digitiser:
 
         self.play_sound("done")
 
-    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate, limit:int=30):
+    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate=None, limit:int=30):
         """ """
         print(
             "Pressing the stylus button more than 30 cm from the head reference will undo the point"
@@ -227,7 +227,7 @@ class Digitiser:
 
         idx = 0
 
-        if isinstance(template, HelmetTemplate):
+        if template:
             self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
 
         self.plotter.update_message_box(
@@ -254,8 +254,9 @@ class Digitiser:
                 self.plotter.update_message_box(
                     label=labels[idx], category=category
                 )
-                if isinstance(template, HelmetTemplate):
-                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template=template)
+                if template:
+                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
+
 
             if cont:
                 self.update_digitised_data(
