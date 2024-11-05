@@ -46,7 +46,7 @@ class HelmetTemplate:
         self.label = label
         self.unit = unit
 
-    def get_chs_pos(self, labels):
+    def get_chs_pos(self, labels:list[str]):
         """
         Retrieve the positions of the channels specified by the input labels.
 
@@ -56,6 +56,9 @@ class HelmetTemplate:
         Returns:
             np.array: An array of positions for the specified channels.
         """
+        if isinstance(labels, str):
+            labels = [labels]
+
         positions = []
 
         for label in labels:
@@ -110,7 +113,7 @@ with template_path.open("rb") as file:
 def generate_FL_helmet_template():
     import mat73
 
-    outpath = Path(__file__).parents[1] / "OPM_lab" / "template"
+    outpath = Path(__file__).parents[1] / "sensor_position" / "template"
     data_dict = mat73.loadmat(outpath / 'fieldlinealpha1.mat')
     data = data_dict["fieldlinealpha1"]
 
@@ -122,6 +125,9 @@ def generate_FL_helmet_template():
         fid_pos=data["fid"]["pos"],
         unit=data["unit"])
 
-    outpath = Path(__file__).parents[1] / "OPM_lab" / "template"
     with open(outpath / "FL_alpha1_helmet.pkl", 'wb') as file:
         pickle.dump(FL_template, file)
+
+
+if __name__ in "__main__":
+    generate_FL_helmet_template()
