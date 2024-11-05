@@ -11,6 +11,7 @@ current_file = Path(__file__).resolve()
 parent_directory = current_file.parent.parent 
 sys.path.append(str(parent_directory)) 
 from OPM_lab.digitise import Digitiser, FastrakConnector
+from OPM_lab.sensor_position import FL_alpha1_helmet
 
 
 def get_participant_information():
@@ -31,7 +32,7 @@ if __name__ == "__main__":
         output_path.mkdir(parents=True)
 
     fiducials = ["lpa", "rpa", "nasion"]
-    OPM_sensors = ["FL52", "FL61", "FL92", "FL99"]
+    OPM_sensors = ["FL59", "FL105", "FL106", "FL103", "FL102", "FL107", "FL104", "FL61","FL60", "FL99", "FL83", "FL84", "FL98", "FL57", "FL58"]
     EEG_sensors = ["Fp1", "Fp2"]
 
     head_surface_size = 60
@@ -39,7 +40,7 @@ if __name__ == "__main__":
     connector = FastrakConnector(usb_port='/dev/cu.usbserial-110')
     connector.prepare_for_digitisation()
 
-    digitiser = Digitiser(connector=connector)
+    digitiser = Digitiser(connector=connector, helmet_template=FL_alpha1_helmet)
     
     digitiser.add(category="fiducials", labels=fiducials, dig_type="single")
     digitiser.add(category="OPM", labels=OPM_sensors, dig_type="single")
