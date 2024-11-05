@@ -1,117 +1,128 @@
+import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib import gridspec
-import os
-import math
-import pandas as pd
 from pathlib import Path
+import os
 from .fastrak_connector import FastrakConnector
 from ..sensor_position import HelmetTemplate
-
+import math
+from abc import ABC, abstractmethod
 BASE_DIR = Path(__file__).resolve().parents[1]
 SOUND_DIR = BASE_DIR / "soundfiles"
 
 
 
-class DigitisationPlotter:
-    def __init__(self, helmet_template:HelmetTemplate, set_axes_limits:bool=True):
+
+class BasePlotter(ABC):
+    
+    @abstractmethod
+    def setup_figure(self):
+        pass
+    
+    @abstractmethod
+    def add_point_3d(self, x, y, z, category):
+        pass
+    
+    @abstractmethod
+    def helmet_plot(self, marked_sensors, focused_sensor, template):
+        pass
+
+    @abstractmethod
+    def update_message_box(self, category: str, label: str):
+        pass
+
+    @abstractmethod
+    def refresh_plot(self):
+        pass
+
+class MatplotlibPlotter(BasePlotter):
+    def __init__(self, set_axes_limits=True):
         self.fig, self.ax_dig, self.ax_helmet, self.ax_text = self.setup_figure(set_axes_limits)
-        self.helmet_template = helmet_template
-
-    import matplotlib.pyplot as plt
-
 
     def setup_figure(self, set_axes_limits=True):
-        # Set up the figure with a GridSpec layout to better control subplot positions
         fig = plt.figure(figsize=(15, 6))
-        gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1, 0.3], wspace=0.4)  # Adjust width_ratios and wspace for spacing
-
-        # 3D plot subplot for digitised points
+        gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1, 1], wspace=0.2)
+        
         ax_dig = fig.add_subplot(gs[0], projection="3d")
-        ax_dig.set_xlabel("X")
-        ax_dig.set_ylabel("Y")
-        ax_dig.set_zlabel("Z")
-        ax_dig.set_title("Points Digitised")
+        ax_helmet = fig.add_subplot(gs[1], projection="3d")
+        ax_text = fig.add_subplot(gs[2])
+
         if set_axes_limits:
             ax_dig.set_xlim([-30, 30])
             ax_dig.set_ylim([-30, 30])
             ax_dig.set_zlim([-30, 30])
 
-        # 3D plot subplot for OPM helmet template
-        ax_helmet = fig.add_subplot(gs[1], projection="3d")
-        ax_helmet.set_xlabel("X")
-        ax_helmet.set_ylabel("Y")
-        ax_helmet.set_zlabel("Z")
-        ax_helmet.set_title("OPM Helmet Template")
+        for ax, title in zip([ax_helmet, ax_dig], ["Helmet template", "Digtised points"]):
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_zlabel("Z")
+            ax.set_title(title)
 
-
-        # Textbox subplot with spacing for messages
-        ax_text = fig.add_subplot(gs[2])
+    
         ax_text.axis("off")
+        ax_text.set_title( "Now digitising...")
+
 
         return fig, ax_dig, ax_helmet, ax_text
 
-    
-    
-    def helmet_plot(self, marked_sensors = list[str], focused_sensor:str = None):
-        for pos in self.helmet_template.chan_pos:
-            self.ax_helmet.scatter(*pos, c="lightblue", label="all sensors", alpha=0.7, s=30, marker="s")
+    def helmet_plot(self, marked_sensors, focused_sensor, template):
+        for pos in template.chan_pos:
+            self.ax_helmet.scatter(*pos, c="lightblue", alpha=0.7, s=30, marker="s")
         
-        for pos in self.helmet_template.get_chs_pos(marked_sensors):
+        for pos in template.get_chs_pos(marked_sensors):
             self.ax_helmet.scatter(*pos, c="blue", label="all sensors", alpha=0.6, s=8)
         
         if isinstance(focused_sensor, str): 
-            focus = self.helmet_template.get_chs_pos([focused_sensor])[0]
+            focus = template.get_chs_pos([focused_sensor])[0]
             self.ax_helmet.scatter(*focus, c="red", label="all sensors", alpha=1, s=20)
-    
 
-    def update_message_box(self, category:str, label:str, message:str):
-        """Updates the message box with the current sensor information."""
-        self.ax_text.clear()
-        self.ax_text.axis("off")  # Turn off axis lines
-        self.ax_text.text(
-            0.5, 0.4, f"{category}: {label}", va="center", ha="center", fontsize=14
-        )
-        self.ax_text.text(
-            0.5, 0.8, message, va="center", ha="center", fontsize=14, color="red"
-        )
-
-    def add_point_3d(self, x:float, y:float, z:float, category:str):
-        """Add a point to the 3D plot."""
-        alpha = 0.9
-        size = 6
-        if category == "OPM":
-            color = "blue"
-        elif category == "EEG":
-            color = "orange"
-        elif category == "fiducials":
-            color = "green"
+    def add_point_3d(self, x, y, z, category):
+        color = {"OPM": "blue", "EEG": "orange", "fiducials": "green"}.get(category, "black")
+        if category == "head":
+            alpha = 0.5
         else:
-            color = "k"
-            alpha = 0.2
-            size = 3
+            alpha = 1
+        
+        self.ax_dig.scatter(x, y, z, c=color, alpha=alpha, s=6)
 
-        self.ax_dig.scatter(x, y, z, c=color, label=category, alpha=alpha, s=size)
+    def update_message_box(self, category, label):
+        for txt in self.ax_text.texts:
+            txt.set_visible(False)
+        self.ax_text.text(0.5, 0.8, f"{category}: {label}", va="center", ha="center", fontsize = 30)
 
-    def refresh_plot(self):
-        """Refreshes the plot to reflect any new changes."""
+    def refresh_plot(self, pace = "slow"):
         plt.draw()
-        plt.pause(0.3)
+        if pace == "slow":
+            plt.pause(0.3)
+        else:
+            plt.pause(0.1)
 
-    def refresh_plot_fast(self):
-        """Refreshes the plot to reflect any new changes."""
-        plt.draw()
-        plt.pause(0.1)
 
-    def close_plot(self):
-        """Closes the plot"""
-        plt.close()
+class DigitisationPlotter:
+    def __init__(self, library="matplotlib"):
+        if library == "matplotlib":
+            self.plotter = MatplotlibPlotter()
+
+        else: 
+            raise ValueError("not implemented")
+
+    def helmet_plot(self, marked_sensors=[], focused_sensor=None, template=None):
+        self.plotter.helmet_plot(marked_sensors, focused_sensor, template)
+
+    def add_point_3d(self, x, y, z, category):
+        self.plotter.add_point_3d(x, y, z, category)
+
+    def update_message_box(self, category, label):
+        self.plotter.update_message_box(category, label)
+
+    def refresh_plot(self, **kwargs):
+        self.plotter.refresh_plot(**kwargs)
 
 
 class Digitiser:
     def __init__(
         self, 
         connector: FastrakConnector,
-        helmet_template: HelmetTemplate,
         digtisation_scheme: list[dict] = [],
     ):
         """
@@ -124,9 +135,9 @@ class Digitiser:
             columns=["category", "label", "x", "y", "z"]
         )
         self.digitisation_scheme = digtisation_scheme
-        self.plotter = DigitisationPlotter(helmet_template)
+        self.plotter = DigitisationPlotter()
 
-    def add(self, category:str, labels:list[str]=[], dig_type:str="single", n_points=None):
+    def add(self, category:str, labels:list[str]=[], dig_type:str="single", n_points=None, template = None):
         """
         Adds to the digitisiation scheme
 
@@ -135,6 +146,7 @@ class Digitiser:
             labels (list of strings): the labels of the points for example ["rpa", "lpa", "nasion"]. If None the label will be the same as the category.
             dig_type (str): whether to digitise the points seperately with specific labels (single) or continuously (continuous)
             n_points (None or int): if no labels are provided, you need to indicate how many points you want to digitise
+            template (HelmetTemplate): to show to guide digitistation
         """
 
         if dig_type not in ["single", "continuous"]:
@@ -151,6 +163,7 @@ class Digitiser:
                 "labels": labels,
                 "dig_type": dig_type,
                 "n_points": n_points,
+                "template": template
             }
         )
 
@@ -183,8 +196,7 @@ class Digitiser:
     def digitise_continuous(self, category, n_points):
         self.plotter.update_message_box(
             label=category,
-            category=category,
-            message="Ready for digitization... Press the stylus button to record points.",
+            category=category
         )
 
         idx = 0
@@ -195,7 +207,7 @@ class Digitiser:
             data, position = self.connector.get_position_relative_to_head_receiver()
 
             self.plotter.update_message_box(
-                    label="", category=category, message=f"Now digitising:{idx}/{ n_points}"
+                    label="", category=category,
                 )
 
             self.update_digitised_data(
@@ -203,11 +215,11 @@ class Digitiser:
             )
 
             idx += 1  # Move to the next point
-            self.plotter.refresh_plot_fast()
+            self.plotter.refresh_plot(pace = "fast")
 
         self.play_sound("done")
 
-    def digitise_single(self, category:str, labels:list[str], limit:int=30):
+    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate, limit:int=30):
         """ """
         print(
             "Pressing the stylus button more than 30 cm from the head reference will undo the point"
@@ -215,11 +227,11 @@ class Digitiser:
 
         idx = 0
 
-        if category == "OPM":
-            self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx])
+        if isinstance(template, HelmetTemplate):
+            self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
 
         self.plotter.update_message_box(
-            label=labels[idx], category=category, message="Ready for digitization..."
+            label=labels[idx], category=category,
         )
         self.plotter.refresh_plot()
 
@@ -240,10 +252,10 @@ class Digitiser:
 
             if idx <= len(labels) - 1:
                 self.plotter.update_message_box(
-                    label=labels[idx], category=category, message="Now digitising:"
+                    label=labels[idx], category=category
                 )
-                if category == "OPM":
-                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx])
+                if isinstance(template, HelmetTemplate):
+                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template=template)
 
             if cont:
                 self.update_digitised_data(
@@ -253,7 +265,6 @@ class Digitiser:
             else:
                 # remove the last row of the digitised points
                 self.digitised_points = self.digitised_points.head(-1)
-            
         
 
             self.plotter.refresh_plot()
@@ -271,12 +282,13 @@ class Digitiser:
             category = dig["category"]
             labels = dig["labels"]
             dig_type = dig["dig_type"]
+            template = dig["template"]
 
             if dig_type == "continuous":
                 self.digitise_continuous(category, dig["n_points"])
 
             elif dig_type == "single":
-                self.digitise_single(category, labels)
+                self.digitise_single(category, labels, template)
 
             else:
                 raise ValueError(
@@ -319,10 +331,3 @@ class Digitiser:
             os.system(f'afplay "{SOUND_DIR / "wrongbeep.wav"}"')
         elif sound_type == "done":
             os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
-
-
-
-    
-
-
-
