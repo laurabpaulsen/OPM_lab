@@ -15,7 +15,7 @@ class OPMSensorLayout:
         label : list[str]
             The labels of the sensors, used to identify it in the helmet template (as all sensors slots may not be used).
         depth : list[float]
-            A list of depth measurements for channel, affecting sensor 
+            A list of depth measurements in mm for channel, affecting sensor 
             positioning within the template.
         helmet_template : HelmetTemplate
             An instance of the HelmetTemplate class, providing the base template for
@@ -54,8 +54,9 @@ class OPMSensorLayout:
         # Update template location given the depth measurement
         self.chan_pos = self.transform_template_depth()
         self.chan_ori = self.helmet_template.get_chs_ori(self.label)
+
     
-    def transform_template_depth(self, len_sleeve:float = 0.075, offset:float = 40/1000): #len_sleeve:float = 75/1000, offset:float = 13/1000
+    def transform_template_depth(self): #len_sleeve:float = 75/1000, offset:float = 13/1000
         template_ori = self.helmet_template.get_chs_ori(self.label)
         template_pos = self.helmet_template.get_chs_pos(self.label)
         
@@ -64,14 +65,11 @@ class OPMSensorLayout:
         
         # Move template pos by measurement length in template ori direction
         for pos, ori, depth in zip(template_pos, template_ori, self.depth):
-            # Normalize the orientation vector
-            ori = np.array(ori)
-            norm = np.linalg.norm(ori)
-            if norm != 0: # they are all very close to 1 so maybe omit this
-                ori = ori / norm
-            
-            # Update the position by adding the normalized orientation scaled by the measurement
-            new_pos = np.array(pos) + ori * -(len_sleeve - (depth + offset))
-            transformed_pos.append(new_pos)
+            updated_depth = (52-depth)/1000
+            x = (pos[0] - (updated_depth* ori[2,0]))
+            y = (pos[1] - (updated_depth* ori[2,1]))
+            z = pos[2] + (updated_depth * ori[2,2])
+
+            transformed_pos.append([x, y, z])
         
         return np.array(transformed_pos)
