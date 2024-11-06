@@ -2,9 +2,6 @@ from .sensor_position import OPMSensorLayout
 import pandas as pd
 from mne.transforms import Transform, _quat_to_affine, _fit_matched_points
 from mne.channels import make_dig_montage
-from scipy.spatial.transform import (
-    Rotation as R,
-)  # for conversion from eulers angles to rotation matrix
 import numpy as np
 
 
@@ -44,42 +41,6 @@ def add_sensor_layout(mne_object, sensor_layout: OPMSensorLayout):
         sensor_layout: A layout object containing channel positions, orientations, labels and coil type.
     """
 
-    def vector_to_rotation_matrix(orientation_vector):
-        """
-        Converts a rotation vector to a rotation matrix. Current implementation is tentative.
-        """
-        
-        """
-        CHATGPT SOLUTION....
-        # Normalize the input orientation vector (which is the normal vector)
-        O = orientation_vector / np.linalg.norm(orientation_vector)
-        
-        # Step 2: Choose an arbitrary vector that is not collinear with O
-        # Here we use the x-axis unit vector [1, 0, 0] unless O is close to it.
-        if np.allclose(O, [1, 0, 0]):  # If O is along the x-axis, use y-axis as arbitrary vector
-            v1 = np.array([0, 1, 0])
-        else:
-            v1 = np.array([1, 0, 0])
-        
-        # Step 3: Compute E_X as the orthogonal projection of v1 onto the plane of O
-        E_X = v1 - np.dot(v1, O) * O  # Remove the component of v1 in the direction of O
-        E_X /= np.linalg.norm(E_X)  # Normalize E_X
-        
-        # Step 4: Compute E_Y as the cross product of O and E_X (to ensure orthogonality)
-        E_Y = np.cross(O, E_X)
-        
-        # Construct the full 3x3 orientation matrix (each row is E_X, E_Y, O)
-        orientation_matrix = np.vstack([E_X, E_Y, O])
-
-        OTHER IDEAS
-
-        rot = R.from_rotvec(orientation_vector, degrees=False) # not sure if the fieldline template orientation is a eulers
-        #rot = R.from_euler("xyz", orientation_vector, degrees=False) # not sure if the fieldline template orientation is a rotvec
-        orientation_matrix = rot.as_matrix() # not sure this converts it to the correct type of matrix
-        """
-        
-        raise NotImplementedError("Vector-to-matrix conversion needs validation")
-
     for pos, ori, label in zip(
         sensor_layout.chan_pos, sensor_layout.chan_ori, sensor_layout.label
     ):
@@ -96,8 +57,7 @@ def add_sensor_layout(mne_object, sensor_layout: OPMSensorLayout):
             continue
 
         mne_object.info["chs"][idx]["loc"][:3] = pos
-        ori_matrix = vector_to_rotation_matrix(ori)
-        mne_object.info["chs"][idx]["loc"][3:] = ori_matrix.flatten()
+        mne_object.info["chs"][idx]["loc"][3:] = ori.flatten()
         mne_object.info["chs"][idx]["coil_type"] = sensor_layout.coil_type
 
 

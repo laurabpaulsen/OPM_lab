@@ -16,7 +16,7 @@ if __name__ in "__main__":
 
     raw_old = raw.copy()
     dig_path = Path(__file__).parent / "output"
-    points = pd.read_csv(dig_path / "test1_digitisation.csv")
+    points = pd.read_csv(dig_path / "test1_digitisation.csv", names = ['sensor_type', 'label', 'x', 'y', 'z'])
 
     raw.pick(["00:01-BZ_CL", '00:02-BZ_CL', "00:03-BZ_CL", "00:04-BZ_CL"])
 
@@ -27,7 +27,7 @@ if __name__ in "__main__":
     
 
 
-    depth_meas = [40/1000, 47/1000, 44/1000, 40/1000] # mm converted to meter (order = 3, 10, 16, 62)
+    depth_meas = [40., 47., 44., 40.] # mm converted to meter (order = 3, 10, 16, 62)
 
     sensor_layout = OPMSensorLayout(
             label=["FL3", "FL10", "FL16", "FL62"], 
