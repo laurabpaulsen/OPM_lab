@@ -7,6 +7,7 @@ from .fastrak_connector import FastrakConnector
 from ..sensor_position import HelmetTemplate
 import math
 from abc import ABC, abstractmethod
+import time
 BASE_DIR = Path(__file__).resolve().parents[1]
 SOUND_DIR = BASE_DIR / "soundfiles"
 
@@ -93,15 +94,16 @@ class MatplotlibPlotter(BasePlotter):
     def refresh_plot(self, pace = "slow"):
         plt.draw()
         if pace == "slow":
-            plt.pause(0.3)
+            plt.pause(1)
         else:
-            plt.pause(0.1)
-
+            plt.pause(0.001)
 
 class DigitisationPlotter:
     def __init__(self, library="matplotlib"):
         if library == "matplotlib":
             self.plotter = MatplotlibPlotter()
+        elif library == "dash":
+            self.plotter = DashPlotter()
 
         else: 
             raise ValueError("not implemented")
@@ -124,6 +126,7 @@ class Digitiser:
         self, 
         connector: FastrakConnector,
         digtisation_scheme: list[dict] = [],
+        plotting_libary:str = "matplotlib"
     ):
         """
         Args:
@@ -135,7 +138,8 @@ class Digitiser:
             columns=["category", "label", "x", "y", "z"]
         )
         self.digitisation_scheme = digtisation_scheme
-        self.plotter = DigitisationPlotter()
+        self.visualiser = DigitisationPlotter(plotting_libary)
+        self.last_click_time = 0
 
     def add(self, category:str, labels:list[str]=[], dig_type:str="single", n_points=None, template = None):
         """
@@ -177,7 +181,7 @@ class Digitiser:
             position (tuple): The (x, y, z) coordinates of the point.
         """
         # Add the point to the 3D plot
-        self.plotter.add_point_3d(*position, category=category)
+        self.visualiser.add_point_3d(*position, category=category)
 
         new_data = pd.DataFrame(
             {
@@ -194,20 +198,22 @@ class Digitiser:
         )
 
     def digitise_continuous(self, category, n_points):
-        self.plotter.update_message_box(
+        self.visualiser.update_message_box(
             label=category,
             category=category
         )
+        self.visualiser.refresh_plot()
 
         idx = 0
         print("Press the stylus button to start scanning")
 
         # Run until we have captured enough points or user stops scanning
         while idx < n_points:
+            print(idx)
             data, position = self.connector.get_position_relative_to_head_receiver()
 
-            self.plotter.update_message_box(
-                    label="", category=category, label=f"{idx}/{n_points}",
+            self.visualiser.update_message_box(
+                    category=category, label=f"{idx+1}/{n_points}",
                 )
 
             self.update_digitised_data(
@@ -215,11 +221,12 @@ class Digitiser:
             )
 
             idx += 1  # Move to the next point
-            self.plotter.refresh_plot(pace = "fast")
+
+            self.visualiser.refresh_plot(pace = "fast")
 
         self.play_sound("done")
 
-    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate=None, limit:int=30):
+    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate=None, limit:int=30, wait = 1):
         """ """
         print(
             "Pressing the stylus button more than 30 cm from the head reference will undo the point"
@@ -228,15 +235,24 @@ class Digitiser:
         idx = 0
 
         if template:
-            self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
+            self.visualiser.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
 
-        self.plotter.update_message_box(
+        self.visualiser.update_message_box(
             label=labels[idx], category=category,
         )
-        self.plotter.refresh_plot()
+        self.visualiser.refresh_plot()
 
         while idx < len(labels):
-            print(idx)
+            print(f"{idx}: {labels[idx]}")
+            current_time = time.time()
+
+            remaining_time = wait - (current_time - self.last_click_time)
+            if remaining_time > 0:
+                time.sleep(remaining_time)
+            
+            self.connector.clear_old_data()
+
+
             sensor_data, position = (
                 self.connector.get_position_relative_to_head_receiver()
             )
@@ -250,25 +266,29 @@ class Digitiser:
                 self.calculate_distance(point1, point2), idx, limit=limit
             )
 
-            if idx <= len(labels) - 1:
-                self.plotter.update_message_box(
-                    label=labels[idx], category=category
+            if idx >= len(labels) - 1:
+                self.visualiser.update_message_box(
+                    label="Moving on to next category", category=category
                 )
-                if template:
-                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
-
-
+            else: 
+               self.visualiser.update_message_box(
+                    label=labels[idx], category=category
+                ) 
+               if template:
+                    self.visualiser.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
+                
             if cont:
                 self.update_digitised_data(
                     category=category, label=labels[idx - 1], position=position
                 )
+                self.last_click_time = current_time 
 
             else:
                 # remove the last row of the digitised points
                 self.digitised_points = self.digitised_points.head(-1)
-        
 
-            self.plotter.refresh_plot()
+            self.visualiser.refresh_plot(pace = "slow")
+
 
 
     def run_digitisation(self):
@@ -295,7 +315,6 @@ class Digitiser:
                 raise ValueError(
                     f"dig_type {dig_type} is not implemented. Use either single or continuous"
                 )
-        self.plotter.close_plot()
 
     def save_digitisation(self, output_path:Path):
         """
