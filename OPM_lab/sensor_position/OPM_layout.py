@@ -1,8 +1,9 @@
 import numpy as np 
 from .helmet_layout import HelmetTemplate
 from mne.utils._bunch import NamedInt
+from .template_base import TemplateBase
 
-class OPMSensorLayout:
+class OPMSensorLayout(TemplateBase):
     def __init__(self, label:list[str], depth:list[float], helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
         """
         Represents the layout of an Optically Pumped Magnetometer (OPM) sensor array
@@ -47,8 +48,8 @@ class OPMSensorLayout:
         self.helmet_template = helmet_template
         self.unit = self.helmet_template.unit
         self.coil_type = coil_type
-        
         self.make_sensor_layout()
+        super().__init__(self.label, self.unit)
 
     def make_sensor_layout(self):
         # Update template location given the depth measurement

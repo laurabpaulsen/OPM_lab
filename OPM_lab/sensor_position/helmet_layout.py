@@ -2,8 +2,9 @@ import numpy as np
 import pickle
 from pathlib import Path
 import pandas as pd
+from .template_base import TemplateBase
 
-class HelmetTemplate:    
+class HelmetTemplate(TemplateBase):    
     """
     A class representing the template layout of a helmet with positions and orientations of sensor slots.
     It stores positions, orientations, fiducial positions, and associated labels, 
@@ -46,30 +47,7 @@ class HelmetTemplate:
         self.fid_label = fid_label
         self.label = label
         self.unit = unit
-
-    def get_chs_pos(self, labels:list[str]):
-        """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            np.array: An array of positions for the specified channels.
-        """
-        if isinstance(labels, str):
-            labels = [labels]
-
-        positions = []
-
-        for label in labels:
-            if label in self.label:
-                index = self.label.index(label)
-                positions.append(self.chan_pos[index])
-            else:
-                print(f"Label '{label}' not found in the helmet template.")
-
-        return np.array(positions)
+        super().__init__(label, unit)
 
     def get_chs_ori(self, labels):
         """
