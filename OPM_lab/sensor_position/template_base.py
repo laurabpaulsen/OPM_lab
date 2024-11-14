@@ -1,10 +1,10 @@
 import numpy as np
 
 class TemplateBase:
-    def __init__(self, label, unit):
+    def __init__(self, label, unit, chan_pos):
         self.label = label
         self.unit = unit
-        self.chan_pos = np.array([])
+        self.chan_pos
 
     def get_attributes_by_labels(self, labels, attribute):
         """
@@ -37,26 +37,5 @@ class TemplateBase:
 
         return np.array(values)
     
-    
-    def get_chs_pos(self, labels:list[str]):
-        """
-        Retrieve the positions of the channels specified by the input labels.
-        
-        Parameters:
-            labels (list[str] or str): A list of channel label or a channel label to retrieve positions for.
-        
-        Returns:
-            np.array: An array of positions for the specified channels.
-        """
-        if isinstance(labels, str):
-            labels = [labels]
-
-        positions = []
-        for label in labels:
-            if label in self.label:
-                index = self.label.index(label)
-                positions.append(self.chan_pos[index])
-            else:
-                print(f"Label '{label}' not found in the template.")
-
+    def get_chs_pos(self, labels: list[str]):
         return self.get_attributes_by_labels(labels, 'chan_pos')

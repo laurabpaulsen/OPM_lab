@@ -42,12 +42,12 @@ class HelmetTemplate(TemplateBase):
     """
     def __init__(self, chan_ori, chan_pos, label, fid_pos, fid_label, unit):
         self.chan_ori = chan_ori
-        self.chan_pos = chan_pos
+        #self.chan_pos = chan_pos
         self.fid_pos = fid_pos
         self.fid_label = fid_label
-        self.label = label
-        self.unit = unit
-        super().__init__(label, unit)
+        #self.label = label
+        #self.unit = unit
+        super().__init__(label, unit, chan_pos)
 
 
     def get_chs_ori(self, labels):

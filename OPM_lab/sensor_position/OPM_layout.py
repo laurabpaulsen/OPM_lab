@@ -43,18 +43,18 @@ class OPMSensorLayout(TemplateBase):
             List of orientation vectors for each channel.
         """
 
-        self.label = label
+        #self.label = label
         self.depth = depth
         self.helmet_template = helmet_template
-        self.unit = self.helmet_template.unit
+        #self.unit = self.
         self.coil_type = coil_type
-        self.make_sensor_layout()
-        super().__init__(self.label, self.unit)
+        chan_pos, self.chan_ori = self.make_sensor_layout(label)
+        super().__init__(label, helmet_template.unit, chan_pos)
 
-    def make_sensor_layout(self):
-        # Update template location given the depth measurement
-        self.chan_pos = self.transform_template_depth()
-        self.chan_ori = self.helmet_template.get_chs_ori(self.label)
+    def make_sensor_layout(self, labels):
+        chan_pos = self.transform_template_depth()
+        chan_ori = self.helmet_template.get_chs_ori(labels)
+        return chan_pos, chan_ori
 
     
     def transform_template_depth(self): #len_sleeve:float = 75/1000, offset:float = 13/1000
