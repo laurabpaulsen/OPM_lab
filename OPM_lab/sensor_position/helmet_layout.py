@@ -49,47 +49,18 @@ class HelmetTemplate(TemplateBase):
         self.unit = unit
         super().__init__(label, unit)
 
+
     def get_chs_ori(self, labels):
         """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            list: A list of orientations for the specified channels.
+        Retrieve orientations by using the generic get_attributes_by_labels.
         """
-        orientations = []
-
-        for label in labels:
-            if label in self.label:
-                index = self.label.index(label)
-                orientations.append(self.chan_ori[index])
-            else:
-                print(f"Label '{label}' not found in the helmet template.")
-
-        return np.array(orientations)
+        return self.get_attributes_by_labels(labels, 'chan_ori')
 
     def get_fid_pos(self, labels):
         """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            list: A list of orientations for the specified channels.
+        Retrieve fiducial positions by using the generic get_attributes_by_labels.
         """
-        pos = []
-
-        for label in labels:
-            if label in self.fid_label:
-                index = self.label.index(label)
-                pos.append(self.fid_pos[index])
-            else:
-                print(f"Label '{label}' not found as a helmet fiducial label in the helmet template.")
-
-        return np.array(pos)
+        return self.get_attributes_by_labels(labels, 'fid_pos')
 
 
 class CustomUnpickler(pickle.Unpickler):
