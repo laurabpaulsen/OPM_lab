@@ -1,329 +1,248 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.animation import FuncAnimation
 from matplotlib import gridspec
 from pathlib import Path
 import os
 from .fastrak_connector import FastrakConnector
 from ..sensor_position import HelmetTemplate
 import math
-from abc import ABC, abstractmethod
+
 BASE_DIR = Path(__file__).resolve().parents[1]
 SOUND_DIR = BASE_DIR / "soundfiles"
-
-
-
-
-class BasePlotter(ABC):
-    
-    @abstractmethod
-    def setup_figure(self):
-        pass
-    
-    @abstractmethod
-    def add_point_3d(self, x, y, z, category):
-        pass
-    
-    @abstractmethod
-    def helmet_plot(self, marked_sensors, focused_sensor, template):
-        pass
-
-    @abstractmethod
-    def update_message_box(self, category: str, label: str):
-        pass
-
-    @abstractmethod
-    def refresh_plot(self):
-        pass
-
-class MatplotlibPlotter(BasePlotter):
-    def __init__(self, set_axes_limits=True):
-        self.fig, self.ax_dig, self.ax_helmet, self.ax_text = self.setup_figure(set_axes_limits)
-
-    def setup_figure(self, set_axes_limits=True):
-        fig = plt.figure(figsize=(15, 6))
-        gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1, 1], wspace=0.2)
-        
-        ax_dig = fig.add_subplot(gs[0], projection="3d")
-        ax_helmet = fig.add_subplot(gs[1], projection="3d")
-        ax_text = fig.add_subplot(gs[2])
-
-        if set_axes_limits:
-            ax_dig.set_xlim([-30, 30])
-            ax_dig.set_ylim([-30, 30])
-            ax_dig.set_zlim([-30, 30])
-
-        for ax, title in zip([ax_helmet, ax_dig], ["Helmet template", "Digtised points"]):
-            ax.set_xlabel("X")
-            ax.set_ylabel("Y")
-            ax.set_zlabel("Z")
-            ax.set_title(title)
-
-    
-        ax_text.axis("off")
-        ax_text.set_title( "Now digitising...")
-
-
-        return fig, ax_dig, ax_helmet, ax_text
-
-    def helmet_plot(self, marked_sensors, focused_sensor, template):
-        for pos in template.chan_pos:
-            self.ax_helmet.scatter(*pos, c="lightblue", alpha=0.7, s=30, marker="s")
-        
-        for pos in template.get_chs_pos(marked_sensors):
-            self.ax_helmet.scatter(*pos, c="blue", label="all sensors", alpha=0.6, s=8)
-        
-        if isinstance(focused_sensor, str): 
-            focus = template.get_chs_pos([focused_sensor])[0]
-            self.ax_helmet.scatter(*focus, c="red", label="all sensors", alpha=1, s=20)
-
-    def add_point_3d(self, x, y, z, category):
-        color = {"OPM": "blue", "EEG": "orange", "fiducials": "green"}.get(category, "black")
-        if category == "head":
-            alpha = 0.5
-        else:
-            alpha = 1
-        
-        self.ax_dig.scatter(x, y, z, c=color, alpha=alpha, s=6)
-
-    def update_message_box(self, category, label):
-        for txt in self.ax_text.texts:
-            txt.set_visible(False)
-        self.ax_text.text(0.5, 0.8, f"{category}: {label}", va="center", ha="center", fontsize = 30)
-
-    def refresh_plot(self, pace = "slow"):
-        plt.draw()
-        if pace == "slow":
-            plt.pause(0.3)
-        else:
-            plt.pause(0.1)
-
-
-class DigitisationPlotter:
-    def __init__(self, library="matplotlib"):
-        if library == "matplotlib":
-            self.plotter = MatplotlibPlotter()
-
-        else: 
-            raise ValueError("not implemented")
-
-    def helmet_plot(self, marked_sensors=[], focused_sensor=None, template=None):
-        self.plotter.helmet_plot(marked_sensors, focused_sensor, template)
-
-    def add_point_3d(self, x, y, z, category):
-        self.plotter.add_point_3d(x, y, z, category)
-
-    def update_message_box(self, category, label):
-        self.plotter.update_message_box(category, label)
-
-    def refresh_plot(self, **kwargs):
-        self.plotter.refresh_plot(**kwargs)
 
 
 class Digitiser:
     def __init__(
         self, 
         connector: FastrakConnector,
-        digtisation_scheme: list[dict] = [],
+        digitisation_scheme: list[dict] = [],
     ):
-        """
-        Args:
-            connector (FastrakConnector):
-            plotter (DigitisationPlotter):
-        """
         self.connector = connector
-        self.digitised_points = pd.DataFrame(
-            columns=["category", "label", "x", "y", "z"]
-        )
-        self.digitisation_scheme = digtisation_scheme
-        self.plotter = DigitisationPlotter()
+        self.digitised_points = pd.DataFrame(columns=["category", "label", "x", "y", "z"])
+        self.digitisation_scheme = digitisation_scheme
+        self.current_category = None
+        self.labels:list[int] = []  # To track labels for single digitisation
+        self.current_label_idx = 0
+        self.n_points = 0
+        self.fig, self.ax_dig, self.ani = None, None, None  # Plot elements
 
-    def add(self, category:str, labels:list[str]=[], dig_type:str="single", n_points=None, template = None):
-        """
-        Adds to the digitisiation scheme
-
-        Args:
-            category (str): which type of points you want to digitise (for example OPM, fiducials or head)
-            labels (list of strings): the labels of the points for example ["rpa", "lpa", "nasion"]. If None the label will be the same as the category.
-            dig_type (str): whether to digitise the points seperately with specific labels (single) or continuously (continuous)
-            n_points (None or int): if no labels are provided, you need to indicate how many points you want to digitise
-            template (HelmetTemplate): to show to guide digitistation
-        """
-
+    def add(self, category: str, labels: list[str] = [], dig_type: str = "single", n_points: int = None, template:HelmetTemplate=None):
         if dig_type not in ["single", "continuous"]:
-            raise ValueError
+            raise ValueError("Invalid dig_type; must be either 'single' or 'continuous'.")
 
         if dig_type == "continuous" and n_points is None:
-            raise ValueError(
-                "If the digitisation type is continous, you need to add the number of points you want to digitise using the n_points flag"
-            )
+            raise ValueError("For 'continuous' digitisation, specify n_points.")
 
-        self.digitisation_scheme.append(
-            {
-                "category": category,
-                "labels": labels,
-                "dig_type": dig_type,
-                "n_points": n_points,
-                "template": template
-            }
-        )
+        self.digitisation_scheme.append({
+            "category": category,
+            "labels": labels,
+            "dig_type": dig_type,
+            "n_points": n_points,
+            "template": template
+        })
 
-    def update_digitised_data(self, category:str, label:str, position:tuple[float, float, float]):
+    def setup_plot(self):
+        # Initialize plot with the figure and axis
+        self.fig = plt.figure(figsize=(15, 6))
+        gs = gridspec.GridSpec(1, 3, width_ratios=[1, 1, 1], wspace=0.2)
+        self.ax_dig = self.fig.add_subplot(gs[0], projection="3d")
+        self.ax_helmet = self.fig.add_subplot(gs[1], projection="3d")
+        self.ax_text = self.fig.add_subplot(gs[2])
+        self.ax_text.axis("off")
+
+        # 3D plot settings for digitised points
+        self.ax_dig.set_xlim([-30, 30])
+        self.ax_dig.set_ylim([-30, 30])
+        self.ax_dig.set_zlim([-30, 30])
+        self.ax_dig.set_xlabel("X")
+        self.ax_dig.set_ylabel("Y")
+        self.ax_dig.set_zlabel("Z")
+        self.ax_dig.set_title("Digitised points")
+
+
+    def start_animation(self):
+        # Start animation with FuncAnimation
+        self.ani = FuncAnimation(self.fig, self.animate, interval=200, cache_frame_data=False)
+        plt.show()
+    
+    def animate(self, i):
+        # Initial setup for the first frame
+        if i == 0:
+            self.current_label = self.labels[self.current_label_idx]
+        # Handle continuous or single mode logic
+        elif self.current_dig_type == "single":
+            self.handle_single_digitisation(i)
+        elif self.current_dig_type == "continuous":
+            self.handle_continuous_digitisation(i)
+
+        # Plot the digitised points
+        self.update_plot()
+
+        # Update the helmet view and instructions
+        self.update_helmet_and_instructions()
+
+        # Reset axis labels and limits for the 3D plots
+        self.reset_plot_axes()
+
+    def handle_single_digitisation(self, i):
         """
-        Helper method to update the 3D plot and digitised points DataFrame.
+        Handle logic for single digitisation mode:
+        - Check if the point is valid (within the range from the head receiver).
+        - Update the label index and play sound accordingly.
+        """
+        data, position = self.connector.get_position_relative_to_head_receiver()
 
+        # Check if the point is too far from the head (more than 30 cm)
+        point1 = (data[1, 0], data[2, 0], data[3, 0])
+        point2 = (data[1, 1], data[2, 1], data[3, 1])
+
+        # Calculate distance and determine whether to move to next point or undo
+        distance = self.calculate_distance(point1, point2)
+        idx, cont = self.idx_of_next_point(distance, self.current_label_idx)
+
+        if not cont:
+            self.play_sound("wrong")
+            self.current_label_idx = idx
+            if self.current_label_idx != 0:
+                self.current_label_idx = idx
+            # Undo the last point
+            self.digitised_points = self.digitised_points.head(-1)
+            print(self.digitised_points.tail(3))
+        else:
+            self.update_digitised_data(self.current_category, self.current_label, position)
+            self.current_label_idx += 1
+            try:
+                self.current_label = self.labels[self.current_label_idx]
+            except IndexError: # when no more labes are present close the plot
+                plt.close()
+        
+    def handle_continuous_digitisation(self, i):
+        """
+        Handle logic for continuous digitisation mode:
+        - Continuously capture data and update the points.
+        - Progress the label index after each valid capture.
+        """
+        data, position = self.connector.get_position_relative_to_head_receiver()
+
+        self.update_digitised_data(self.current_category, self.current_label, position)
+        self.current_label_idx += 1
+
+        try:
+            self.current_label = self.labels[self.current_label_idx]
+        except IndexError: # when no more labes are present close the plot
+            plt.close()
+
+    def update_plot(self):
+        """
+        Update the 3D plot with the digitised points.
+        This method will clear the previous plot and re-render the points.
+        """
+        self.ax_dig.cla()  # Clear previous frame
+        colors = {'OPM': 'blue', 'head': 'grey', "fiducials": "red", "EEG": "purple"}
+        alpha = {'head': 0.5, 'OPM': 1.0, 'fiducials': 1.0, 'EEG': 1.0}  # Define alpha values for each category
+
+        if not self.digitised_points.empty:
+            self.ax_dig.scatter(
+                self.digitised_points['x'],
+                self.digitised_points['y'],
+                self.digitised_points['z'],
+                c=self.digitised_points['category'].map(colors),
+                alpha=self.digitised_points['category'].map(alpha)
+            )
+            for _, row in self.digitised_points.iterrows():
+                if row['category'] != "head":  # Exclude head points
+                    self.ax_dig.text(row['x'], row['y'], row['z'], row['label'])
+
+    def update_helmet_and_instructions(self):
+        """
+        Update the helmet view and the instructions shown to the user.
+        This includes displaying the current label and the point being digitised.
+        """
+        # Update helmet view
+        self.ax_helmet.cla()  # Clear previous frame
+        if self.current_template:
+            for pos in self.current_template.chan_pos:
+                self.ax_helmet.scatter(*pos, c="lightblue", alpha=0.7, s=30, marker="s")
+            for pos in self.current_template.get_chs_pos(self.labels):
+                self.ax_helmet.scatter(*pos, c="blue", label="all sensors", alpha=0.6, s=8)
+
+            focus = self.current_template.get_chs_pos([self.current_label])[0]
+            self.ax_helmet.scatter(*focus, c="red", label="current sensor", alpha=1, s=20)
+
+        # Update instructions text
+        self.ax_text.clear()  # Clear any previous instructions
+        self.ax_text.axis('off')  # Hide axes for text display
+
+        try:
+            current_instruction = f"{self.current_category}\n{self.labels[self.current_label_idx]}"
+        except IndexError:
+            current_instruction = f"Done digitising {self.current_category}"
+        
+        self.ax_text.text(0.1, 0.8, current_instruction, fontsize=30, color="black")
+
+        point_instruction = f"Point {self.current_label_idx + 1} of {self.n_points}"
+        self.ax_text.text(0.1, 0.6, point_instruction, fontsize=20, color="black")
+
+    def reset_plot_axes(self):
+        """
+        Reset the plot axes to default settings.
+        """
+        for ax in [self.ax_dig, self.ax_helmet]:
+            ax.set_xlabel("X")
+            ax.set_ylabel("Y")
+            ax.set_zlabel("Z")
+
+        self.ax_dig.set_xlim([-30, 30])
+        self.ax_dig.set_ylim([-30, 30])
+        self.ax_dig.set_zlim([-30, 30])
+        self.ax_dig.set_title("Digitised points")
+
+    def update_digitised_data(self, category: str, label: str, position: tuple[float, float, float]):
+        """
+        Update the dataframe with a new position for a digitised point.
+        
         Args:
-            category (str): The category of the point (e.g., OPM, EEG, fiducials).
-            label (str): The label of the point (e.g., specific marker name).
+            category (str): The category of the point (e.g., 'OPM', 'head').
+            label (str): The label associated with this point.
             position (tuple): The (x, y, z) coordinates of the point.
         """
-        # Add the point to the 3D plot
-        self.plotter.add_point_3d(*position, category=category)
-
-        new_data = pd.DataFrame(
-            {
-                "category": [category],
-                "label": [label],
-                "x": [position[0]],
-                "y": [position[1]],
-                "z": [position[2]],
-            }
-        )
-
+        # Update the dataframe with new position data
+        new_data = pd.DataFrame({
+            "category": [category],
+            "label": [label],
+            "x": [position[0]],
+            "y": [position[1]],
+            "z": [position[2]],
+        })
+       
+         
         self.digitised_points = pd.concat(
-            [self.digitised_points, new_data], ignore_index=True
-        )
-
-    def digitise_continuous(self, category, n_points):
-        self.plotter.update_message_box(
-            label=category,
-            category=category
-        )
-
-        idx = 0
-        print("Press the stylus button to start scanning")
-
-        # Run until we have captured enough points or user stops scanning
-        while idx < n_points:
-            data, position = self.connector.get_position_relative_to_head_receiver()
-
-            self.plotter.update_message_box(
-                    label="", category=category, label=f"{idx}/{n_points}",
-                )
-
-            self.update_digitised_data(
-                category=category, label=category, position=position
-            )
-
-            idx += 1  # Move to the next point
-            self.plotter.refresh_plot(pace = "fast")
-
-        self.play_sound("done")
-
-    def digitise_single(self, category:str, labels:list[str], template:HelmetTemplate=None, limit:int=30):
-        """ """
-        print(
-            "Pressing the stylus button more than 30 cm from the head reference will undo the point"
-        )
-
-        idx = 0
-
-        if template:
-            self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
-
-        self.plotter.update_message_box(
-            label=labels[idx], category=category,
-        )
-        self.plotter.refresh_plot()
-
-        while idx < len(labels):
-            print(idx)
-            sensor_data, position = (
-                self.connector.get_position_relative_to_head_receiver()
-            )
-
-            # checking if the click was more than 30 cm from the head reference
-            point1 = (sensor_data[1, 0], sensor_data[2, 0], sensor_data[3, 0])
-            point2 = (sensor_data[1, 1], sensor_data[2, 1], sensor_data[3, 1])
-
-            # adjust the index based on whether the point is valid or needs to be undone (i.e. more than 30 cm away from head receiver)
-            idx, cont = self.idx_of_next_point(
-                self.calculate_distance(point1, point2), idx, limit=limit
-            )
-
-            if idx <= len(labels) - 1:
-                self.plotter.update_message_box(
-                    label=labels[idx], category=category
-                )
-                if template:
-                    self.plotter.helmet_plot(marked_sensors=labels, focused_sensor=labels[idx], template = template)
-
-
-            if cont:
-                self.update_digitised_data(
-                    category=category, label=labels[idx - 1], position=position
-                )
-
-            else:
-                # remove the last row of the digitised points
-                self.digitised_points = self.digitised_points.head(-1)
-        
-
-            self.plotter.refresh_plot()
-
+            [self.digitised_points if not self.digitised_points.empty else None, 
+             new_data], 
+            
+            ignore_index=True)
 
     def run_digitisation(self):
-        """
-        Runs the digitisation scheme
-        """
-
         for dig in self.digitisation_scheme:
-            # to make sure any "residue" button presses from previously does not interfere
+            # Set up for digitising points
+            self.current_category = dig["category"]
+            self.n_points = dig["n_points"] if dig["n_points"] else len(dig["labels"])
+            self.labels = dig["labels"] if dig["labels"] else [self.current_category] * self.n_points
+            self.current_label_idx = 0
+            self.current_template = dig["template"]
+            self.current_dig_type = dig["dig_type"]
+            
+            
             self.connector.clear_old_data()
 
-            category = dig["category"]
-            labels = dig["labels"]
-            dig_type = dig["dig_type"]
-            template = dig["template"]
+            self.setup_plot()
+            self.start_animation()
 
-            if dig_type == "continuous":
-                self.digitise_continuous(category, dig["n_points"])
-
-            elif dig_type == "single":
-                self.digitise_single(category, labels, template)
-
-            else:
-                raise ValueError(
-                    f"dig_type {dig_type} is not implemented. Use either single or continuous"
-                )
-        self.plotter.close_plot()
-
-    def save_digitisation(self, output_path:Path):
-        """
-        Args:
-            output_path (Path or str): path to save a csv file with the digitised points
-        """
+    def save_digitisation(self, output_path: Path):
+        # Save the digitised points to a CSV file
         self.digitised_points.to_csv(output_path, index=False)
-    
-    @staticmethod
-    def calculate_distance(point1:tuple, point2:tuple):
-        # unpack the coordinates of point1 and point2
-        x1, y1, z1 = point1
-        x2, y2, z2 = point2
 
-        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
-    
-    def idx_of_next_point(self, distance:float, idx:int, limit:float=30.,):
-        # if stylus was clicked more than limit away from the head reference, the last point is undone
-        if distance > limit:
-            self.play_sound("wrong")
-            if idx == 0:
-                return 0, False
-            else:
-                return idx - 1, False
-        else:  # moving on to the next
-            self.play_sound("beep")
-            return idx + 1, True
-        
     @staticmethod
     def play_sound(sound_type):
         if sound_type == "beep":
@@ -332,3 +251,22 @@ class Digitiser:
             os.system(f'afplay "{SOUND_DIR / "wrongbeep.wav"}"')
         elif sound_type == "done":
             os.system(f'afplay "{SOUND_DIR / "done.mp3"}"')
+
+    @staticmethod
+    def calculate_distance(point1:tuple, point2:tuple):
+        # unpack the coordinates of point1 and point2
+        x1, y1, z1 = point1
+        x2, y2, z2 = point2
+
+        return math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2 + (z2 - z1) ** 2)
+    
+    def idx_of_next_point(self, distance:float, idx:int, limit:float=30.):
+        # if stylus was clicked more than limit away from the head reference, the last point is undone
+        if distance > limit:
+            if idx <= 0:
+                return 0, False
+            else:
+                return idx - 1, False
+        else:  # moving on to the next
+            return idx + 1, True
+
