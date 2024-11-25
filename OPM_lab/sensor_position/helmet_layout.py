@@ -54,13 +54,13 @@ class HelmetTemplate(TemplateBase):
         """
         Retrieve orientations by using the generic get_attributes_by_labels.
         """
-        return self.get_attributes_by_labels(labels, 'chan_ori')
+        return self._get_attributes_by_labels(labels, 'chan_ori')
 
     def get_fid_pos(self, labels):
         """
         Retrieve fiducial positions by using the generic get_attributes_by_labels.
         """
-        return self.get_attributes_by_labels(labels, 'fid_pos')
+        return self._get_attributes_by_labels(labels, 'fid_pos')
 
 
 class CustomUnpickler(pickle.Unpickler):

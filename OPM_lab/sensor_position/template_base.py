@@ -41,5 +41,5 @@ class TemplateBase:
         return np.array(values)
     
     def get_chs_pos(self, labels: list[str]=None):
-        return self.get_attributes_by_labels(labels, 'chan_pos')
+        return self._get_attributes_by_labels(labels, 'chan_pos')
     
