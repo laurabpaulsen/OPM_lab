@@ -4,9 +4,9 @@ class TemplateBase:
     def __init__(self, label, unit, chan_pos):
         self.label = label
         self.unit = unit
-        self.chan_pos
+        self.chan_pos = chan_pos
 
-    def get_attributes_by_labels(self, labels, attribute):
+    def _get_attributes_by_labels(self, labels=None, attribute="chan_pos"):
         """
         General method to retrieve values of a specified attribute based on labels.
 
@@ -20,6 +20,9 @@ class TemplateBase:
         # if one label is supplied rather than a list, make sure to put it in a list
         if isinstance(labels, str):
             labels = [labels]
+
+        if labels is None: # return all labels
+            labels = self.label
 
         # Get the attribute (e.g., self.chan_pos, self.chan_ori)
         attr_values = getattr(self, attribute, None)
@@ -37,5 +40,6 @@ class TemplateBase:
 
         return np.array(values)
     
-    def get_chs_pos(self, labels: list[str]):
+    def get_chs_pos(self, labels: list[str]=None):
         return self.get_attributes_by_labels(labels, 'chan_pos')
+    

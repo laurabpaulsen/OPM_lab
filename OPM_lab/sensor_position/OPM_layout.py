@@ -52,14 +52,14 @@ class OPMSensorLayout(TemplateBase):
         super().__init__(label, helmet_template.unit, chan_pos)
 
     def make_sensor_layout(self, labels):
-        chan_pos = self.transform_template_depth()
+        chan_pos = self.transform_template_depth(labels)
         chan_ori = self.helmet_template.get_chs_ori(labels)
         return chan_pos, chan_ori
 
     
-    def transform_template_depth(self): #len_sleeve:float = 75/1000, offset:float = 13/1000
-        template_ori = self.helmet_template.get_chs_ori(self.label)
-        template_pos = self.helmet_template.get_chs_pos(self.label)
+    def transform_template_depth(self, labels): #len_sleeve:float = 75/1000, offset:float = 13/1000
+        template_ori = self.helmet_template.get_chs_ori(labels)
+        template_pos = self.helmet_template.get_chs_pos(labels)
         
         # Create a new list to store the updated positions
         transformed_pos = []
@@ -74,3 +74,7 @@ class OPMSensorLayout(TemplateBase):
             transformed_pos.append([x, y, z])
         
         return np.array(transformed_pos)
+
+    def get_chs_ori(self, labels: list[str]=None):
+        return self._get_attributes_by_labels(labels, 'chan_ori')
+    
