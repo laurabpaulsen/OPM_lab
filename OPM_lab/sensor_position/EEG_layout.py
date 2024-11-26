@@ -5,8 +5,8 @@ from .template_base import TemplateBase
 class EEGcapTemplate(TemplateBase):
     def __init__(self, montage:str):
         self.montage = montage
-        self.chan_pos, self.label, self.unit = self.get_montage_information()
-        super().__init__(self.label, self.unit)
+        chan_pos, self.label, self.unit = self.get_montage_information()
+        super().__init__(self.label, self.unit, chan_pos)
     
     def get_montage_information(self):
 
