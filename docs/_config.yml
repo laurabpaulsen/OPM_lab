@@ -1,6 +1,8 @@
+title: OPM lab
+description: The code used for data collection and data analysis of OPM data
 theme: just-the-docs
 
-title: OPM_lab
-description: OPM lab is a collection of code used for data collection and analysis of OPM data
-url: https://laurabpaulsen.github.io/OPM_lab
-#exclude:
+url: https://laurabpaulsen.github.io/OPM_lab/
+
+aux_links:
+  Template Repository: https://github.com/just-the-docs/just-the-docs-template
