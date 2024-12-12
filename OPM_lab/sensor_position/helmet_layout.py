@@ -2,8 +2,9 @@ import numpy as np
 import pickle
 from pathlib import Path
 import pandas as pd
+from .template_base import TemplateBase
 
-class HelmetTemplate:    
+class HelmetTemplate(TemplateBase):    
     """
     A class representing the template layout of a helmet with positions and orientations of sensor slots.
     It stores positions, orientations, fiducial positions, and associated labels, 
@@ -41,77 +42,25 @@ class HelmetTemplate:
     """
     def __init__(self, chan_ori, chan_pos, label, fid_pos, fid_label, unit):
         self.chan_ori = chan_ori
-        self.chan_pos = chan_pos
+        #self.chan_pos = chan_pos
         self.fid_pos = fid_pos
         self.fid_label = fid_label
-        self.label = label
-        self.unit = unit
+        #self.label = label
+        #self.unit = unit
+        super().__init__(label, unit, chan_pos)
 
-    def get_chs_pos(self, labels:list[str]):
-        """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            np.array: An array of positions for the specified channels.
-        """
-        if isinstance(labels, str):
-            labels = [labels]
-
-        positions = []
-
-        for label in labels:
-            if label in self.label:
-                index = self.label.index(label)
-                positions.append(self.chan_pos[index])
-            else:
-                print(f"Label '{label}' not found in the helmet template.")
-
-        return np.array(positions)
 
     def get_chs_ori(self, labels):
         """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            list: A list of orientations for the specified channels.
+        Retrieve orientations by using the generic get_attributes_by_labels.
         """
-        orientations = []
-
-        for label in labels:
-            if label in self.label:
-                index = self.label.index(label)
-                orientations.append(self.chan_ori[index])
-            else:
-                print(f"Label '{label}' not found in the helmet template.")
-
-        return np.array(orientations)
+        return self._get_attributes_by_labels(labels, 'chan_ori')
 
     def get_fid_pos(self, labels):
         """
-        Retrieve the positions of the channels specified by the input labels.
-
-        Parameters:
-            labels (list): A list of channel labels to retrieve positions for.
-
-        Returns:
-            list: A list of orientations for the specified channels.
+        Retrieve fiducial positions by using the generic get_attributes_by_labels.
         """
-        pos = []
-
-        for label in labels:
-            if label in self.fid_label:
-                index = self.label.index(label)
-                pos.append(self.fid_pos[index])
-            else:
-                print(f"Label '{label}' not found as a helmet fiducial label in the helmet template.")
-
-        return np.array(pos)
+        return self._get_attributes_by_labels(labels, 'fid_pos')
 
 
 class CustomUnpickler(pickle.Unpickler):

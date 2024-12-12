@@ -1,8 +1,9 @@
 import numpy as np 
 from .helmet_layout import HelmetTemplate
 from mne.utils._bunch import NamedInt
+from .template_base import TemplateBase
 
-class OPMSensorLayout:
+class OPMSensorLayout(TemplateBase):
     def __init__(self, label:list[str], depth:list[float], helmet_template:HelmetTemplate, coil_type:NamedInt = NamedInt("FieldLine OPM sensor Gen1 size = 2.00   mm", 8101)):
         """
         Represents the layout of an Optically Pumped Magnetometer (OPM) sensor array
@@ -42,23 +43,23 @@ class OPMSensorLayout:
             List of orientation vectors for each channel.
         """
 
-        self.label = label
+        #self.label = label
         self.depth = depth
         self.helmet_template = helmet_template
-        self.unit = self.helmet_template.unit
+        #self.unit = self.
         self.coil_type = coil_type
-        
-        self.make_sensor_layout()
+        chan_pos, self.chan_ori = self.make_sensor_layout(label)
+        super().__init__(label, helmet_template.unit, chan_pos)
 
-    def make_sensor_layout(self):
-        # Update template location given the depth measurement
-        self.chan_pos = self.transform_template_depth()
-        self.chan_ori = self.helmet_template.get_chs_ori(self.label)
+    def make_sensor_layout(self, labels):
+        chan_pos = self.transform_template_depth(labels)
+        chan_ori = self.helmet_template.get_chs_ori(labels)
+        return chan_pos, chan_ori
 
     
-    def transform_template_depth(self): #len_sleeve:float = 75/1000, offset:float = 13/1000
-        template_ori = self.helmet_template.get_chs_ori(self.label)
-        template_pos = self.helmet_template.get_chs_pos(self.label)
+    def transform_template_depth(self, labels): #len_sleeve:float = 75/1000, offset:float = 13/1000
+        template_ori = self.helmet_template.get_chs_ori(labels)
+        template_pos = self.helmet_template.get_chs_pos(labels)
         
         # Create a new list to store the updated positions
         transformed_pos = []
@@ -73,3 +74,7 @@ class OPMSensorLayout:
             transformed_pos.append([x, y, z])
         
         return np.array(transformed_pos)
+
+    def get_chs_ori(self, labels: list[str]=None):
+        return self._get_attributes_by_labels(labels, 'chan_ori')
+    

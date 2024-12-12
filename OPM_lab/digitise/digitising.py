@@ -17,6 +17,7 @@ class Digitiser:
         self, 
         connector: FastrakConnector,
         digitisation_scheme: list[dict] = [],
+        y_lim:bool = False
     ):
         self.connector = connector
         self.digitised_points = pd.DataFrame(columns=["category", "label", "x", "y", "z"])
@@ -26,6 +27,7 @@ class Digitiser:
         self.current_label_idx = 0
         self.n_points = 0
         self.fig, self.ax_dig, self.ani = None, None, None  # Plot elements
+        self.ylim = y_lim
 
     def add(self, category: str, labels: list[str] = [], dig_type: str = "single", n_points: int = None, template:HelmetTemplate=None):
         if dig_type not in ["single", "continuous"]:
@@ -52,9 +54,11 @@ class Digitiser:
         self.ax_text.axis("off")
 
         # 3D plot settings for digitised points
-        self.ax_dig.set_xlim([-30, 30])
-        self.ax_dig.set_ylim([-30, 30])
-        self.ax_dig.set_zlim([-30, 30])
+        if self.ylim:
+            self.ax_dig.set_xlim([-30, 30])
+            self.ax_dig.set_ylim([-30, 30])
+            self.ax_dig.set_zlim([-30, 30])
+        
         self.ax_dig.set_xlabel("X")
         self.ax_dig.set_ylabel("Y")
         self.ax_dig.set_zlabel("Z")
@@ -110,6 +114,7 @@ class Digitiser:
             self.digitised_points = self.digitised_points.head(-1)
             print(self.digitised_points.tail(3))
         else:
+            self.play_sound("beep")
             self.update_digitised_data(self.current_category, self.current_label, position)
             self.current_label_idx += 1
             try:
@@ -162,9 +167,7 @@ class Digitiser:
         # Update helmet view
         self.ax_helmet.cla()  # Clear previous frame
         if self.current_template:
-            for pos in self.current_template.chan_pos:
-                self.ax_helmet.scatter(*pos, c="lightblue", alpha=0.7, s=30, marker="s")
-            for pos in self.current_template.get_chs_pos(self.labels):
+            for pos in self.current_template.get_chs_pos():
                 self.ax_helmet.scatter(*pos, c="blue", label="all sensors", alpha=0.6, s=8)
 
             focus = self.current_template.get_chs_pos([self.current_label])[0]
@@ -192,10 +195,10 @@ class Digitiser:
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
             ax.set_zlabel("Z")
-
-        self.ax_dig.set_xlim([-30, 30])
-        self.ax_dig.set_ylim([-30, 30])
-        self.ax_dig.set_zlim([-30, 30])
+        if self.ylim:
+            self.ax_dig.set_xlim([-30, 30])
+            self.ax_dig.set_ylim([-30, 30])
+            self.ax_dig.set_zlim([-30, 30])
         self.ax_dig.set_title("Digitised points")
 
     def update_digitised_data(self, category: str, label: str, position: tuple[float, float, float]):
