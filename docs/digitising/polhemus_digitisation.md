@@ -1,7 +1,6 @@
 ---
 title: Polhemus digitistation
 nav_order: 1
-layout: default
 parent: Digtising
 ---
 # Polhemus digitisation
