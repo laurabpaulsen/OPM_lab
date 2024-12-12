@@ -3,8 +3,6 @@ title: Home
 layout: home
 nav_order: 1
 ---
-
-# OPM_lab
 **OPM_lab** is a free and open source software package developed to allow for co-registration between optically pumped magnetometers and a structural brain image. However, parts of the software may be useful for other purposes.
 
 The workflow contains three main parts:

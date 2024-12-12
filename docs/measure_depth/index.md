@@ -1,6 +1,6 @@
 ---
 title: Measuring sensor depth
-nav_order: 4
+nav_order: 1
 layout: default
 ---
 
