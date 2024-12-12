@@ -1,6 +1,8 @@
 ---
 title: Polhemus digitistation
 nav_order: 1
+layout: default
+parent: Digtising
 ---
 # Polhemus digitisation
 To digtise using this module,first you need to initialise a FastrakConnector object where you specify the USB port the device is connected to. Afterwards you prepare for digitisation, which will return the fastrak to factory settings, set the output to metric, clear any incoming data and check whether the stylus and head receiver are connected properly. 
