@@ -1,12 +1,9 @@
 __all__ = [
     "Digitiser",
-    "DigitisationPlotter",
     "FastrakConnector"
 ]
 from .digitising import (
-    Digitiser,
-    DigitisationPlotter
-
+    Digitiser
 )
 from .fastrak_connector import (
     FastrakConnector
