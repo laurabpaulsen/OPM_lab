@@ -4,22 +4,23 @@ nav_order: 1
 parent: Co-registration
 layout: default
 ---
-Knowing the position (and orientation in the case of sensors measuring magnetic fields) is crucial to allow for reconstruction of neural sources from the data measured at the sensors. 
+Knowing the position (and orientation in the case of sensors measuring magnetic fields) is crucial to allow for estimation of neural sources from the data measured at the sensors. 
 
 Here we show an example of co-registering 4 OPM sensors placed in the Fieldline Alpha1 semi-rigid helmet to an MR of the participants brain. 
 
 First, we load modules we need
 
 ```python
-from pyvista import Plotter
-
 from OPM_lab.mne_integration import add_dig_montage, add_device_to_head, add_sensor_layout
 from OPM_lab.sensor_position import OPMSensorLayout, FL_alpha1_helmet
 
+import mne
 from mne.viz import plot_alignment
 from mne.utils._bunch import NamedInt
-import mne
+
 import pandas as pd
+
+from pyvista import Plotter
 ```
 
 The next step is to load both the raw OPM data, as well as the digitised points (i.e., the output after [Digitising sensor positions]({{ site.url }}{% link digitising/index.md %}))
@@ -90,4 +91,5 @@ fig = plot_alignment(raw.info, meg=("sensors"), dig = True, coord_frame="head", 
 Plotter().show()
 ```
 
-# TO DO - add code for rest of co-registration pipeline
+
+After this step, MNE-python can be used to [estimate the neural sources](https://mne.tools/stable/auto_tutorials/inverse/index.html). 
