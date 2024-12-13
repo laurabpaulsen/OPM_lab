@@ -5,7 +5,6 @@
 # for local imports
 import sys
 from pathlib import Path
-import mne
 
 # make sure to append path to OPM_lab
 current_file = Path(__file__).resolve()
