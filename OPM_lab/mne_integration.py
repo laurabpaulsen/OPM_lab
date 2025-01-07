@@ -78,15 +78,19 @@ def add_sensor_layout(mne_object, sensor_layout: OPMSensorLayout):
         mne_object.info["chs"][idx]["coil_type"] = sensor_layout.coil_type
 
 
-def add_device_to_head(mne_object, digitised_points):
+def add_device_to_head(mne_object, digitised_points, unit="m"):
     """
     Adds a device-to-head transformation to the MNE object.
     Args:
         mne_object: MNE object, such as raw.
         digitised_points (pd.DataFrame): DataFrame with device sensor positions and labels.
+        unit (str): Unit of the digitised points, can be "m", "cm" or "mm".
     """
+    # get the unit of the sensor positions in the mne_object
+    unit_coversion = determine_conversion_factor(unit, "m")
+
     channels = digitised_points[digitised_points["sensor_type"] == "OPM"]
-    sensors_head = channels.loc[:, ["x", "y", "z"]].values / 100
+    sensors_head = channels.loc[:, ["x", "y", "z"]].values / unit_coversion
     labels = channels["label"]
 
     sensors_device = []
