@@ -1,33 +1,50 @@
 from .sensor_position import OPMSensorLayout
+from .utils import determine_conversion_factor
 import pandas as pd
 from mne.transforms import Transform, _quat_to_affine, _fit_matched_points
 from mne.channels import make_dig_montage
 import numpy as np
 
 
-def add_dig_montage(mne_object, df: pd.DataFrame):
+def add_dig_montage(mne_object, df: pd.DataFrame, unit:str = "m"):
     """
     Adds a digitised montage to the MNE object based on fiducial points and head shape.
     Args:
         mne_object: MNE raw or epochs object.
         df (pd.DataFrame): DataFrame with columns ["label", "x", "y", "z"].
+        unit (str): Unit of the digitised points, can be "m", "cm" or "mm".
     """
+    unit_coversion = determine_conversion_factor(unit, "m")
+ 
     required_labels = ["nasion", "lpa", "rpa"]
     if not set(required_labels).issubset(df["label"].unique()):
         raise ValueError(f"DataFrame must contain labels {required_labels}")
 
     fiducials = {
-        label: df.loc[df["label"] == label, ["x", "y", "z"]].values.squeeze() / 100
+        label: df.loc[df["label"] == label, ["x", "y", "z"]].values.squeeze() / unit_coversion
         for label in required_labels
     }
-    head_points = df[df["label"] == "head"].loc[:, ["x", "y", "z"]].values / 100
+    head_points = df[df["label"] == "head"].loc[:, ["x", "y", "z"]].values / unit_coversion
+
+    # check if eeg channels are present in the digitised points
+    eeg_channels = df[df["category"] == "EEG"]
+
+    if eeg_channels.empty:
+        print("No channels with category EEG found in the digitised points. Only fiducials and head shape will be used.")
+        eeg_channel_pos = None
+    else:
+        eeg_channel_pos = {
+            ch["label"]: ch[["x", "y", "z"]].values / unit_coversion
+            for _, ch in eeg_channels.iterrows()
+        }
 
     dig_montage = make_dig_montage(
+        ch_pos=eeg_channel_pos,
         nasion=fiducials["nasion"],
         lpa=fiducials["lpa"],
         rpa=fiducials["rpa"],
         hsp=head_points,
-        coord_frame="head",
+        coord_frame="head"
     )
 
     mne_object.info.set_montage(dig_montage)
