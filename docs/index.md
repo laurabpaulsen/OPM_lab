@@ -10,5 +10,5 @@ The workflow contains three main parts:
 2. [Digitising sensor positions]({{ site.url }}{% link digitising/index.md %})
 3. [Co-registration between MR and sensor positions]({{ site.url }}{% link co-registration/index.md %})
 
-To validate the co-registration procedure 
+To validate the co-registration procedure, the [error in coregistration of head and device]({{ site.url }}{% link validation/head_dev_coreg.md %}) is estimated
 ## Setup 

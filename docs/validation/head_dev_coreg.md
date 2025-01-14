@@ -1,5 +1,5 @@
 ---
-title: Coregistration of 
+title: Error in coregistration of head and device
 nav_order: 1
 layout: default
 parent: Pipeline validation
