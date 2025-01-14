@@ -10,5 +10,5 @@ The workflow contains three main parts:
 2. [Digitising sensor positions]({{ site.url }}{% link digitising/index.md %})
 3. [Co-registration between MR and sensor positions]({{ site.url }}{% link co-registration/index.md %})
 
-
+To validate the co-registration procedure 
 ## Setup 
